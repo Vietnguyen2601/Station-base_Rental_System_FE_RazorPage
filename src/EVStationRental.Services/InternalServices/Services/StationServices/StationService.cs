@@ -63,25 +63,25 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
             };
         }
 
-        public async Task<IServiceResult> GetVehiclesByStationIdAsync(Guid stationId)
-        {
-            var vehicles = await unitOfWork.StationRepository.GetVehiclesByStationIdAsync(stationId);
-            if (vehicles == null || vehicles.Count == 0)
-            {
-                return new ServiceResult
-                {
-                    StatusCode = Const.WARNING_NO_DATA_CODE,
-                    Message = "Không có xe nào trong tr?m này"
-                };
-            }
-            var vehicleDTOs = vehicles.Select(v => v.ToViewVehicleDTO()).ToList();
-            return new ServiceResult
-            {
-                StatusCode = Const.SUCCESS_READ_CODE,
-                Message = Const.SUCCESS_READ_MSG,
-                Data = vehicleDTOs
-            };
-        }
+        //public async Task<IServiceResult> GetVehiclesByStationIdAsync(Guid stationId)
+        //{
+        //    var vehicles = await unitOfWork.StationRepository.GetVehiclesByStationIdAsync(stationId);
+        //    if (vehicles == null || vehicles.Count == 0)
+        //    {
+        //        return new ServiceResult
+        //        {
+        //            StatusCode = Const.WARNING_NO_DATA_CODE,
+        //            Message = "Không có xe nào trong tr?m này"
+        //        };
+        //    }
+        //    var vehicleDTOs = vehicles.Select(v => v.ToViewVehicleDTO()).ToList();
+        //    return new ServiceResult
+        //    {
+        //        StatusCode = Const.SUCCESS_READ_CODE,
+        //        Message = Const.SUCCESS_READ_MSG,
+        //        Data = vehicleDTOs
+        //    };
+        //}
 
         public async Task<IServiceResult> AddVehiclesToStationAsync(AddVehiclesToStationRequestDTO dto)
         {

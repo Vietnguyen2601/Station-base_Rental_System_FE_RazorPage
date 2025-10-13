@@ -27,11 +27,11 @@ public partial class Order
 
     public DateTime? UpdatedAt { get; set; }
 
-    public bool IsActive { get; set; }
-
-    public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+    public bool Isactive { get; set; }
 
     public virtual Account Customer { get; set; } = null!;
+
+    public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
 
     public virtual ICollection<Payment> Payments { get; set; } = new List<Payment>();
 

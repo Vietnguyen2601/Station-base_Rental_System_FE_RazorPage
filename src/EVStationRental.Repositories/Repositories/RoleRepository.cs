@@ -18,14 +18,14 @@ namespace EVStationRental.Repositories.Repositories
         public async Task<Role?> GetRoleByNameAsync(string roleName)
         {
             return await _context.Roles
-                .Where(r => r.RoleName == roleName && r.IsActive)
+                .Where(r => r.RoleName == roleName && r.Isactive)
                 .FirstOrDefaultAsync();
         }
 
         public async Task<List<Role>> GetAllActiveRolesAsync()
         {
             return await _context.Roles
-                .Where(r => r.IsActive)
+                .Where(r => r.Isactive)
                 .ToListAsync();
         }
     }

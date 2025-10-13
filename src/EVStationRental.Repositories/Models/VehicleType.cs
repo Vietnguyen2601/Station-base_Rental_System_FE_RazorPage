@@ -13,6 +13,8 @@ public partial class VehicleType
 
     public DateTime CreatedAt { get; set; }
 
+    public bool Isactive { get; set; }
+
     public DateTime? UpdatedAt { get; set; }
 
     public virtual ICollection<VehicleModel> VehicleModels { get; set; } = new List<VehicleModel>();

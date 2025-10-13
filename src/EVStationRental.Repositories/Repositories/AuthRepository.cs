@@ -1,4 +1,4 @@
-using EVStationRental.Repositories.DBContext;
+﻿using EVStationRental.Repositories.DBContext;
 using EVStationRental.Repositories.IRepositories;
 using EVStationRental.Repositories.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,17 +17,15 @@ public class AuthRepository : IAuthRepository
     public async Task<Account?> GetAccountByUsernameAsync(string username)
     {
         return await _context.Accounts
-            .Include(a => a.AccountRoles)
-            .ThenInclude(ar => ar.Role)
-            .FirstOrDefaultAsync(a => a.Username == username && a.IsActive);
+            .Include(a => a.Role)
+            .FirstOrDefaultAsync(a => a.Username == username && a.Isactive);
     }
 
     public async Task<Account?> GetAccountByIdAsync(Guid accountId)
     {
         return await _context.Accounts
-            .Include(a => a.AccountRoles)
-            .ThenInclude(ar => ar.Role)
-            .FirstOrDefaultAsync(a => a.AccountId == accountId && a.IsActive);
+            .Include(a => a.Role)
+            .FirstOrDefaultAsync(a => a.AccountId == accountId && a.Isactive);
     }
 }
 

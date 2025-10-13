@@ -11,15 +11,19 @@ public partial class Report
 
     public DateTime GeneratedDate { get; set; }
 
-    public string Data { get; set; } = null!;
+    public string Text { get; set; } = null!;
 
     public Guid AccountId { get; set; }
+
+    public Guid VehicleId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
 
-    public bool IsActive { get; set; }
+    public bool Isactive { get; set; }
 
     public virtual Account Account { get; set; } = null!;
+
+    public virtual Vehicle Vehicle { get; set; } = null!;
 }

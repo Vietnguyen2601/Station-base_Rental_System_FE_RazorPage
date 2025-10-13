@@ -21,7 +21,7 @@ public partial class Payment
 
     public DateTime? UpdatedAt { get; set; }
 
-    public bool IsActive { get; set; }
+    public bool Isactive { get; set; }
 
     public virtual Order Order { get; set; } = null!;
 }

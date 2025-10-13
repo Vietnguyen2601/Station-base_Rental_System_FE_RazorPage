@@ -42,7 +42,7 @@ public class AuthService : IAuthService
                 };
             }
 
-            if (!account.IsActive)
+            if (!account.Isactive)
             {
                 return new ServiceResult
                 {
@@ -112,7 +112,7 @@ public class AuthService : IAuthService
                 };
             }
 
-            if (!account.IsActive)
+            if (!account.Isactive)
             {
                 _refreshStore.Remove(request.RefreshToken);
                 return new ServiceResult
@@ -188,6 +188,17 @@ public class AuthService : IAuthService
                 };
             }
 
+            // Get default role (Customer) for new registrations
+            var defaultRole = await _unitOfWork.RoleRepository.GetRoleByNameAsync("Customer");
+            if (defaultRole == null)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = "Không tìm thấy vai trò mặc định trong hệ thống"
+                };
+            }
+
             var account = new Account
             {
                 AccountId = Guid.NewGuid(),
@@ -195,7 +206,8 @@ public class AuthService : IAuthService
                 Password = PasswordHasher.Hash(request.Password),
                 Email = request.Email,
                 ContactNumber = request.ContactNumber,
-                IsActive = true
+                RoleId = defaultRole.RoleId,
+                Isactive = true
             };
 
             // Use GenericRepository create
@@ -238,15 +250,10 @@ public class AuthService : IAuthService
         };
 
         // add role claims
-        if (account.AccountRoles != null)
+        // Since the current database uses one-to-many relationship, get role from Role property
+        if (account.Role != null && !string.IsNullOrWhiteSpace(account.Role.RoleName))
         {
-            foreach (var ar in account.AccountRoles)
-            {
-                if (ar.Role != null && !string.IsNullOrWhiteSpace(ar.Role.RoleName))
-                {
-                    claims.Add(new Claim(ClaimTypes.Role, ar.Role.RoleName));
-                }
-            }
+            claims.Add(new Claim(ClaimTypes.Role, account.Role.RoleName));
         }
 
         var token = new JwtSecurityToken(
