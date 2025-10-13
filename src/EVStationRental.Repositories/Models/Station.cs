@@ -17,11 +17,11 @@ public partial class Station
 
     public int Capacity { get; set; }
 
-    public DateTime CreatedAt { get; set; }
+    public string? ImageUrl { get; set; }
+
+    public bool Isactive { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
-
-    public virtual ICollection<Promotion> Promotions { get; set; } = new List<Promotion>();
 
     public virtual ICollection<Vehicle> Vehicles { get; set; } = new List<Vehicle>();
 }

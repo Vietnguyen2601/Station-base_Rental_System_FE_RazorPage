@@ -9,7 +9,7 @@ public partial class Feedback
 
     public Guid CustomerId { get; set; }
 
-    public Guid VehicleId { get; set; }
+    public Guid OrderId { get; set; }
 
     public int Rating { get; set; }
 
@@ -21,9 +21,9 @@ public partial class Feedback
 
     public DateTime? UpdatedAt { get; set; }
 
-    public bool IsActive { get; set; }
+    public bool Isactive { get; set; }
 
     public virtual Account Customer { get; set; } = null!;
 
-    public virtual Vehicle Vehicle { get; set; } = null!;
+    public virtual Order Order { get; set; } = null!;
 }

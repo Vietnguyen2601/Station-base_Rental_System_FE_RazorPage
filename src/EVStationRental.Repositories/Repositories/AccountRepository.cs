@@ -39,22 +39,23 @@ namespace EVStationRental.Repositories.Repositories
         public async Task<List<Account>> GetAllActiveAccountsAsync()
         {
             return await _context.Accounts
+                .Include(a => a.Role)
+                .Where(a => a.Isactive)
                 .ToListAsync();
         }
 
         public async Task<Account?> GetAccountByAccountRole()
         {
             return await _context.Accounts
-                .Include(a => a.AccountRoles)
+                .Include(a => a.Role)
                 .FirstOrDefaultAsync();
         }
 
         public async Task<Account?> GetAccountWithDetailsAsync(Guid accountId)
         {
             return await _context.Accounts
-                .Include(a => a.AccountRoles)
+                .Include(a => a.Role)
                 .Include(a => a.Feedbacks)
-                .Include(a => a.Licenses)
                 .Include(a => a.OrderCustomers)
                 .Include(a => a.OrderStaffs)
                 .Include(a => a.Reports)
@@ -65,12 +66,14 @@ namespace EVStationRental.Repositories.Repositories
         public async Task<Account?> GetAccountByIdAsync(Guid accountId)
         {
             return await _context.Accounts
+                .Include(a => a.Role)
                 .FirstOrDefaultAsync(a => a.AccountId == accountId);
         }
 
         public async Task<Account?> GetByUsernameOrEmailAsync(string usernameOrEmail)
         {
             return await _context.Accounts
+                .Include(a => a.Role)
                 .Where(a => a.Username == usernameOrEmail || a.Email == usernameOrEmail)
                 .FirstOrDefaultAsync();
         }
@@ -78,8 +81,7 @@ namespace EVStationRental.Repositories.Repositories
         public async Task<List<Account>> GetAllAsync()
         {
             return await _context.Accounts
-                .Include(a => a.AccountRoles)
-                .ThenInclude(ar => ar.Role)
+                .Include(a => a.Role)
                 .ToListAsync();
         }
 
@@ -87,24 +89,20 @@ namespace EVStationRental.Repositories.Repositories
         {
             try
             {
-                // Get existing account roles
-                var existingRoles = await _context.AccountRoles
-                    .Where(ar => ar.AccountId == accountId)
-                    .ToListAsync();
+                // Since the current database uses one-to-many relationship,
+                // we can only set one role at a time
+                // Taking the first role from the list
+                if (roleIds == null || roleIds.Count == 0)
+                    return false;
 
-                // Remove existing roles
-                _context.AccountRoles.RemoveRange(existingRoles);
+                var account = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.AccountId == accountId);
 
-                // Add new roles
-                var newAccountRoles = roleIds.Select(roleId => new AccountRole
-                {
-                    AccountRoleId = Guid.NewGuid(),
-                    AccountId = accountId,
-                    RoleId = roleId,
-                    IsActive = true
-                }).ToList();
+                if (account == null)
+                    return false;
 
-                await _context.AccountRoles.AddRangeAsync(newAccountRoles);
+                // Set the first role (current schema only supports one role per account)
+                account.RoleId = roleIds.First();
                 await _context.SaveChangesAsync();
 
                 return true;
@@ -118,41 +116,31 @@ namespace EVStationRental.Repositories.Repositories
         public async Task<Account?> GetAccountWithRolesAsync(Guid accountId)
         {
             return await _context.Accounts
-                .Include(a => a.AccountRoles)
-                .ThenInclude(ar => ar.Role)
+                .Include(a => a.Role)
                 .FirstOrDefaultAsync(a => a.AccountId == accountId);
         }
 
         public async Task<bool> AddAccountRoleAsync(Guid accountId, Guid roleId)
         {
-            // Check if the role already exists for this account
-            var existingRole = await _context.AccountRoles
-                .FirstOrDefaultAsync(ar => ar.AccountId == accountId && ar.RoleId == roleId);
-
-            if (existingRole != null)
+            try
             {
-                // Role already exists, just ensure it's active
-                if (!existingRole.IsActive)
-                {
-                    existingRole.IsActive = true;
-                    await _context.SaveChangesAsync();
-                }
+                // Since the current database uses one-to-many relationship,
+                // we update the account's RoleId
+                var account = await _context.Accounts
+                    .FirstOrDefaultAsync(a => a.AccountId == accountId);
+
+                if (account == null)
+                    return false;
+
+                account.RoleId = roleId;
+                await _context.SaveChangesAsync();
+
                 return true;
             }
-
-            // Add new role
-            var newAccountRole = new AccountRole
+            catch
             {
-                AccountRoleId = Guid.NewGuid(),
-                AccountId = accountId,
-                RoleId = roleId,
-                IsActive = true
-            };
-
-            await _context.AccountRoles.AddAsync(newAccountRole);
-            await _context.SaveChangesAsync();
-
-            return true;
+                return false;
+            }
         }
     }
 }

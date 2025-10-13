@@ -19,6 +19,8 @@ public partial class VehicleModel
 
     public DateTime CreatedAt { get; set; }
 
+    public bool Isactive { get; set; }
+
     public DateTime? UpdatedAt { get; set; }
 
     public virtual VehicleType Type { get; set; } = null!;

@@ -16,7 +16,6 @@ namespace EVStationRental.Repositories.Mapper
                 Lat = dto.Lat,
                 Long = dto.Long,
                 Capacity = dto.Capacity,
-                CreatedAt = DateTime.Now
             };
         }
 

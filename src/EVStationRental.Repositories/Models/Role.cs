@@ -9,11 +9,7 @@ public partial class Role
 
     public string RoleName { get; set; } = null!;
 
-    public DateTime CreatedAt { get; set; }
+    public bool Isactive { get; set; }
 
-    public DateTime? UpdatedAt { get; set; }
-
-    public bool IsActive { get; set; }
-
-    public virtual ICollection<AccountRole> AccountRoles { get; set; } = new List<AccountRole>();
+    public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();
 }
