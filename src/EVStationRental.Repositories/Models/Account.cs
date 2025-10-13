@@ -22,10 +22,10 @@ public partial class Account
 
     // Mapped property for consistency with DTO naming
     [NotMapped]
-    public bool IsActive 
-    { 
-        get => Isactive; 
-        set => Isactive = value; 
+    public bool IsActive
+    {
+        get => Isactive;
+        set => Isactive = value;
     }
 
     // These properties are not in the database yet, but needed for the DTOs

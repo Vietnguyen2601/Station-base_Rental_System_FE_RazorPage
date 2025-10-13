@@ -7,9 +7,9 @@ namespace EVStationRental.Services.InternalServices.IServices.IVehicleServices
 {
     public interface IVehicleService
     {
-        //Task<IServiceResult> GetAllVehiclesAsync();
-        //Task<IServiceResult> GetVehicleByIdAsync(Guid id);
-        //Task<IServiceResult> CreateVehicleAsync(CreateVehicleRequestDTO dto);
-        //Task<IServiceResult> UpdateVehicleAsync(Guid vehicleId, UpdateVehicleRequestDTO dto);
+        Task<IServiceResult> GetAllVehiclesAsync();
+        Task<IServiceResult> GetVehicleByIdAsync(Guid id);
+        Task<IServiceResult> CreateVehicleAsync(CreateVehicleRequestDTO dto);
+        Task<IServiceResult> UpdateVehicleAsync(Guid vehicleId, UpdateVehicleRequestDTO dto);
     }
 }
