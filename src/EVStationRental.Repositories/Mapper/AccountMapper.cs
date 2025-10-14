@@ -21,7 +21,7 @@ namespace EVStationRental.Repositories.Mapper
                 ContactNumber = account.ContactNumber,
                 CreatedAt = account.CreatedAt,
                 UpdatedAt = account.UpdatedAt,
-                IsActive = account.IsActive,
+                IsActive = account.Isactive,
                 // Since the current database uses one-to-many relationship, get role from Role property
                 RoleName = account.Role != null ? new List<string> { account.Role.RoleName } : new List<string>()
             };
