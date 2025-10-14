@@ -50,12 +50,11 @@ public partial class ElectricVehicleDContext : DbContext
             return envConnectionString;
         }
 
-        // Nếu không có biến môi trường, đọc từ appsettings
         var config = new ConfigurationBuilder()
             .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
             .AddJsonFile("appsettings.json", optional: true)
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Development"}.json", optional: true)
-            .AddEnvironmentVariables() // Thêm biến môi trường vào cấu hình
+            .AddEnvironmentVariables()
             .Build();
 
         string connectionString = config.GetConnectionString(connectionStringName);

@@ -20,15 +20,6 @@ public partial class Account
 
     public bool Isactive { get; set; }
 
-    // Mapped property for consistency with DTO naming
-    [NotMapped]
-    public bool IsActive
-    {
-        get => Isactive;
-        set => Isactive = value;
-    }
-
-    // These properties are not in the database yet, but needed for the DTOs
     [NotMapped]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
