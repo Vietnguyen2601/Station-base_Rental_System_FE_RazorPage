@@ -11,7 +11,11 @@ namespace EVStationRental.Repositories.IRepositories
         Task<Station> CreateStationAsync(Station station);
         Task<List<Station>> GetAllStationsAsync();
         Task<List<Vehicle>> GetVehiclesByStationIdAsync(Guid stationId);
-        Task<bool> AddVehiclesToStationAsync(Guid stationId, List<Guid> vehicleIds);
         Task<Station?> UpdateStationAsync(Station station);
+        Task<bool> AddVehiclesToStationAsync(Guid stationId, List<Guid> vehicleIds);
+        Task<bool> SoftDeleteStationAsync(Guid stationId);
+        Task<List<Station>> GetActiveStationsAsync();
+        Task<List<Station>> GetInactiveStationsAsync();
+        Task<bool> UpdateIsActiveAsync(Guid stationId, bool isActive);
     }
 }

@@ -42,5 +42,35 @@ namespace EVStationRental.Repositories.Repositories
             await _context.SaveChangesAsync();
             return vehicle;
         }
+
+        public async Task<bool> SoftDeleteVehicleAsync(Guid vehicleId)
+        {
+            var vehicle = await GetVehicleByIdAsync(vehicleId);
+            if (vehicle == null) return false;
+            vehicle.Isactive = false;
+            _context.Set<Vehicle>().Update(vehicle);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<Vehicle>> GetActiveVehiclesAsync()
+        {
+            return await _context.Set<Vehicle>().Where(v => v.Isactive).ToListAsync();
+        }
+
+        public async Task<List<Vehicle>> GetInactiveVehiclesAsync()
+        {
+            return await _context.Set<Vehicle>().Where(v => !v.Isactive).ToListAsync();
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(Guid vehicleId, bool isActive)
+        {
+            var vehicle = await GetVehicleByIdAsync(vehicleId);
+            if (vehicle == null) return false;
+            vehicle.Isactive = isActive;
+            _context.Set<Vehicle>().Update(vehicle);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

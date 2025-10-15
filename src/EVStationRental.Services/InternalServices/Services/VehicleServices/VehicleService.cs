@@ -150,5 +150,45 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
                 Data = updated.ToViewVehicleDTO()
             };
         }
+
+        public async Task<IServiceResult> SoftDeleteVehicleAsync(Guid vehicleId)
+        {
+            var success = await unitOfWork.VehicleRepository.SoftDeleteVehicleAsync(vehicleId);
+            if (!success)
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy xe hoặc đã bị xóa" };
+            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Xóa mềm xe thành công" };
+        }
+
+        public async Task<IServiceResult> GetActiveVehiclesAsync()
+        {
+            var vehicles = await unitOfWork.VehicleRepository.GetActiveVehiclesAsync();
+            var vehicleDtos = vehicles.Select(v => v.ToViewVehicleDTO()).ToList();
+            return new ServiceResult
+            {
+                StatusCode = Const.SUCCESS_READ_CODE,
+                Message = Const.SUCCESS_READ_MSG,
+                Data = vehicleDtos
+            };
+        }
+
+        public async Task<IServiceResult> GetInactiveVehiclesAsync()
+        {
+            var vehicles = await unitOfWork.VehicleRepository.GetInactiveVehiclesAsync();
+            var vehicleDtos = vehicles.Select(v => v.ToViewVehicleDTO()).ToList();
+            return new ServiceResult
+            {
+                StatusCode = Const.SUCCESS_READ_CODE,
+                Message = Const.SUCCESS_READ_MSG,
+                Data = vehicleDtos
+            };
+        }
+
+        public async Task<IServiceResult> UpdateIsActiveAsync(Guid vehicleId, bool isActive)
+        {
+            var success = await unitOfWork.VehicleRepository.UpdateIsActiveAsync(vehicleId, isActive);
+            if (!success)
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy xe" };
+            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Cập nhật trạng thái xe thành công" };
+        }
     }
 }

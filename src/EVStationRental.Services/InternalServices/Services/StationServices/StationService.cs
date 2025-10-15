@@ -135,5 +135,43 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                 Data = updated
             };
         }
+
+        public async Task<IServiceResult> SoftDeleteStationAsync(Guid stationId)
+        {
+            var success = await unitOfWork.StationRepository.SoftDeleteStationAsync(stationId);
+            if (!success)
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm th?y tr?m ho?c ?ã b? xóa" };
+            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Xóa m?m tr?m thành công" };
+        }
+
+        public async Task<IServiceResult> GetActiveStationsAsync()
+        {
+            var stations = await unitOfWork.StationRepository.GetActiveStationsAsync();
+            return new ServiceResult
+            {
+                StatusCode = Const.SUCCESS_READ_CODE,
+                Message = Const.SUCCESS_READ_MSG,
+                Data = stations
+            };
+        }
+
+        public async Task<IServiceResult> GetInactiveStationsAsync()
+        {
+            var stations = await unitOfWork.StationRepository.GetInactiveStationsAsync();
+            return new ServiceResult
+            {
+                StatusCode = Const.SUCCESS_READ_CODE,
+                Message = Const.SUCCESS_READ_MSG,
+                Data = stations
+            };
+        }
+
+        public async Task<IServiceResult> UpdateIsActiveAsync(Guid stationId, bool isActive)
+        {
+            var success = await unitOfWork.StationRepository.UpdateIsActiveAsync(stationId, isActive);
+            if (!success)
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm th?y tr?m" };
+            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "C?p nh?t tr?ng thái tr?m thành công" };
+        }
     }
 }
