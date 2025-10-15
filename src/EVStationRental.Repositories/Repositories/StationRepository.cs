@@ -42,6 +42,43 @@ namespace EVStationRental.Repositories.Repositories
                 .ToListAsync();
         }
 
+        public async Task<Station?> UpdateStationAsync(Station station)
+        {
+            _context.Stations.Update(station);
+            await _context.SaveChangesAsync();
+            return station;
+        }
+
+        public async Task<bool> SoftDeleteStationAsync(Guid stationId)
+        {
+            var station = await GetStationByIdAsync(stationId);
+            if (station == null) return false;
+            station.Isactive = false;
+            _context.Set<Station>().Update(station);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<List<Station>> GetActiveStationsAsync()
+        {
+            return await _context.Set<Station>().Where(s => s.Isactive).ToListAsync();
+        }
+
+        public async Task<List<Station>> GetInactiveStationsAsync()
+        {
+            return await _context.Set<Station>().Where(s => !s.Isactive).ToListAsync();
+        }
+
+        public async Task<bool> UpdateIsActiveAsync(Guid stationId, bool isActive)
+        {
+            var station = await GetStationByIdAsync(stationId);
+            if (station == null) return false;
+            station.Isactive = isActive;
+            _context.Set<Station>().Update(station);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> AddVehiclesToStationAsync(Guid stationId, List<Guid> vehicleIds)
         {
             var vehicles = await _context.Vehicles.Where(v => vehicleIds.Contains(v.VehicleId)).ToListAsync();
@@ -49,17 +86,10 @@ namespace EVStationRental.Repositories.Repositories
             foreach (var vehicle in vehicles)
             {
                 vehicle.StationId = stationId;
-                _context.Entry(vehicle).Property(v => v.StationId).IsModified = true;
+                _context.Vehicles.Update(vehicle);
             }
             await _context.SaveChangesAsync();
             return true;
-        }
-
-        public async Task<Station?> UpdateStationAsync(Station station)
-        {
-            _context.Stations.Update(station);
-            await _context.SaveChangesAsync();
-            return station;
         }
     }
 }

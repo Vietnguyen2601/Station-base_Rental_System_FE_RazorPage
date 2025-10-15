@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using EVStationRental.Common.DTOs.VehicleDTOs;
 using System;
+using System.Collections.Generic;
 
 namespace EVStationRental.APIServices.Controllers
 {
@@ -69,6 +70,34 @@ namespace EVStationRental.APIServices.Controllers
         {
             var result = await _vehicleService.UpdateVehicleAsync(id, dto);
             return StatusCode((int)result.StatusCode, new { Message = result.Message, Data = result.Data });
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<IServiceResult>> SoftDeleteVehicleAsync(Guid id)
+        {
+            var result = await _vehicleService.SoftDeleteVehicleAsync(id);
+            return StatusCode((int)result.StatusCode, new { Message = result.Message });
+        }
+
+        [HttpGet("active")]
+        public async Task<ActionResult<IServiceResult>> GetActiveVehiclesAsync()
+        {
+            var result = await _vehicleService.GetActiveVehiclesAsync();
+            return Ok(new { Message = result.Message, Data = result.Data });
+        }
+
+        [HttpGet("inactive")]
+        public async Task<ActionResult<IServiceResult>> GetInactiveVehiclesAsync()
+        {
+            var result = await _vehicleService.GetInactiveVehiclesAsync();
+            return Ok(new { Message = result.Message, Data = result.Data });
+        }
+
+        [HttpPut("{id}/isactive")]
+        public async Task<ActionResult<IServiceResult>> UpdateIsActiveAsync(Guid id, [FromBody] bool isActive)
+        {
+            var result = await _vehicleService.UpdateIsActiveAsync(id, isActive);
+            return StatusCode((int)result.StatusCode, new { Message = result.Message });
         }
     }
 }

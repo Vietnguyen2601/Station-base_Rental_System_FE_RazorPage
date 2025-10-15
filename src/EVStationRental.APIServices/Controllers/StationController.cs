@@ -62,5 +62,33 @@ namespace EVStationRental.APIServices.Controllers
             var result = await _stationService.UpdateStationAsync(id, dto);
             return StatusCode((int)result.StatusCode, new { Message = result.Message, Data = result.Data });
         }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<IServiceResult>> SoftDeleteStationAsync(Guid id)
+        {
+            var result = await _stationService.SoftDeleteStationAsync(id);
+            return StatusCode((int)result.StatusCode, new { Message = result.Message });
+        }
+
+        [HttpGet("active")]
+        public async Task<ActionResult<IServiceResult>> GetActiveStationsAsync()
+        {
+            var result = await _stationService.GetActiveStationsAsync();
+            return Ok(new { Message = result.Message, Data = result.Data });
+        }
+
+        [HttpGet("inactive")]
+        public async Task<ActionResult<IServiceResult>> GetInactiveStationsAsync()
+        {
+            var result = await _stationService.GetInactiveStationsAsync();
+            return Ok(new { Message = result.Message, Data = result.Data });
+        }
+
+        [HttpPut("{id}/isactive")]
+        public async Task<ActionResult<IServiceResult>> UpdateIsActiveAsync(Guid id, [FromBody] bool isActive)
+        {
+            var result = await _stationService.UpdateIsActiveAsync(id, isActive);
+            return StatusCode((int)result.StatusCode, new { Message = result.Message });
+        }
     }
 }
