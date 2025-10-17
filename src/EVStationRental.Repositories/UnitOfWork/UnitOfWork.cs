@@ -15,6 +15,7 @@ namespace EVStationRental.Repositories.UnitOfWork
         private IVehicleModelRepository vehicleModelRepository;
         private IStationRepository stationRepository;
         private IRoleRepository roleRepository;
+        private IVehicleTypeRepository vehicleTypeRepository;
 
         public UnitOfWork()
         {
@@ -42,6 +43,14 @@ namespace EVStationRental.Repositories.UnitOfWork
             get
             {
                 return vehicleModelRepository ??= new Repositories.VehicleModelRepository(_context);
+            }
+        }
+
+        public IVehicleTypeRepository VehicleTypeRepository
+        {
+            get
+            {
+                return vehicleTypeRepository ??= new Repositories.VehicleTypeRepository(_context);
             }
         }
 

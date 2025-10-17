@@ -11,5 +11,6 @@ namespace EVStationRental.Repositories.UnitOfWork
         IVehicleModelRepository VehicleModelRepository { get; }
         IStationRepository StationRepository { get; }
         IRoleRepository RoleRepository { get; }
+        IVehicleTypeRepository VehicleTypeRepository { get; }
     }
 }
