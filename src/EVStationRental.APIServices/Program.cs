@@ -24,6 +24,12 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 //vehicle
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+//Vehicle Model
+builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
+builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
+//Vehicle Type
+builder.Services.AddScoped<IVehicleTypeRepository, VehicleTypeRepository>();
+builder.Services.AddScoped<IVehicleTypeServices, VehicleTypeServices>();
 //station
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
