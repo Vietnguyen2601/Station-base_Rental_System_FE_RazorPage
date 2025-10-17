@@ -1,6 +1,7 @@
-using EVStationRental.Common.DTOs.VehicleDTOs;
+﻿using EVStationRental.Common.DTOs.VehicleDTOs;
 using EVStationRental.Repositories.Models;
 using System;
+using EVStationRental.Common.Enums.EnumModel;
 
 namespace EVStationRental.Repositories.Mapper
 {
@@ -12,17 +13,19 @@ namespace EVStationRental.Repositories.Mapper
             {
                 VehicleId = vehicle.VehicleId,
                 SerialNumber = vehicle.SerialNumber,
-                ModelId = vehicle.ModelId,
-                StationId = vehicle.StationId,
+                TypeName = vehicle.Model?.Type?.TypeName ?? string.Empty,
+                ModelName = vehicle.Model?.Name ?? string.Empty,
+                Manufacturer = vehicle.Model?.Manufacturer ?? string.Empty,
+                PricePerHour = vehicle.Model?.PricePerHour ?? 0,
                 BatteryLevel = vehicle.BatteryLevel,
                 BatteryCapacity = vehicle.BatteryCapacity,
                 Range = vehicle.Range,
                 Color = vehicle.Color,
-                LastMaintenance = vehicle.LastMaintenance,
                 Img = vehicle.Img,
-                CreatedAt = vehicle.CreatedAt,
-                UpdatedAt = vehicle.UpdatedAt,
-                Isactive = vehicle.Isactive
+                StationName = vehicle.Station?.Name ?? string.Empty,
+                Status = vehicle.Status.ToString(),
+                LastMaintenance = vehicle.LastMaintenance,
+                Specs = vehicle.Model?.Specs
             };
         }
 
@@ -57,6 +60,28 @@ namespace EVStationRental.Repositories.Mapper
             if (dto.Img != null) vehicle.Img = dto.Img;
             if (dto.Isactive != null) vehicle.Isactive = dto.Isactive.Value;
             vehicle.UpdatedAt = DateTime.Now;
+        }
+
+        private static string GetTypeNameFromDb(Guid modelId)
+        {
+            // Truy vấn DB để lấy TypeName nếu cần
+            return string.Empty;
+        }
+        private static string GetModelNameFromDb(Guid modelId)
+        {
+            return string.Empty;
+        }
+        private static string GetManufacturerFromDb(Guid modelId)
+        {
+            return string.Empty;
+        }
+        private static decimal GetPricePerHourFromDb(Guid modelId)
+        {
+            return 0;
+        }
+        private static string GetStationNameFromDb(Guid? stationId)
+        {
+            return string.Empty;
         }
     }
 }

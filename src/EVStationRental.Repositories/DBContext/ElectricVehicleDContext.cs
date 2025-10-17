@@ -218,6 +218,7 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.PaymentMethod)
                 .HasMaxLength(100)
                 .HasColumnName("payment_method");
+            // FIX: Payment.Status is a string, keep simple mapping
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasColumnName("status");
@@ -408,6 +409,11 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
+            // NEW: map Vehicle.Status enum to PostgreSQL enum column 'status'
+            entity.Property(e => e.Status)
+                .HasColumnName("status")
+                .HasConversion<string>()
+                .HasColumnType("vehicle_status");
 
             entity.HasOne(d => d.Model).WithMany(p => p.Vehicles)
                 .HasForeignKey(d => d.ModelId)

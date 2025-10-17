@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using EVStationRental.Common.Enums.EnumModel;
 
 namespace EVStationRental.Repositories.Models;
 
@@ -30,6 +31,8 @@ public partial class Vehicle
     public bool Isactive { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+
+    public VehicleStatus Status { get; set; }
 
     public virtual VehicleModel Model { get; set; } = null!;
 

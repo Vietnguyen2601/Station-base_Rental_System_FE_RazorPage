@@ -21,12 +21,22 @@ namespace EVStationRental.Repositories.Repositories
 
         public async Task<List<Vehicle>> GetAllVehiclesAsync()
         {
-            return await _context.Set<Vehicle>().ToListAsync();
+            return await _context.Set<Vehicle>()
+                .Include(v => v.Model)
+                    .ThenInclude(m => m.Type)
+                .Include(v => v.Station)
+                .Include(v => v.Orders)
+                .ToListAsync();
         }
 
         public async Task<Vehicle?> GetVehicleByIdAsync(Guid vehicleId)
         {
-            return await _context.Set<Vehicle>().FindAsync(vehicleId);
+            return await _context.Set<Vehicle>()
+                .Include(v => v.Model)
+                    .ThenInclude(m => m.Type)
+                .Include(v => v.Station)
+                .Include(v => v.Orders)
+                .FirstOrDefaultAsync(v => v.VehicleId == vehicleId);
         }
 
         public async Task<Vehicle> CreateVehicleAsync(Vehicle vehicle)
