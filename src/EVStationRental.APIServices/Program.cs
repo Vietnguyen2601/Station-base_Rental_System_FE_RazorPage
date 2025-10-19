@@ -7,10 +7,12 @@ using EVStationRental.Services.InternalServices.IServices.IAccountServices;
 using EVStationRental.Services.InternalServices.IServices.IAuthServices;
 using EVStationRental.Services.InternalServices.IServices.IVehicleServices;
 using EVStationRental.Services.InternalServices.IServices.IStationServices;
+using EVStationRental.Services.InternalServices.IServices.IPromotionServices;
 using EVStationRental.Services.InternalServices.Services.AccountServices;
 using EVStationRental.Services.InternalServices.Services.AuthServices;
 using EVStationRental.Services.InternalServices.Services.VehicleServices;
 using EVStationRental.Services.InternalServices.Services.StationServices;
+using EVStationRental.Services.InternalServices.Services.PromotionServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
@@ -33,7 +35,9 @@ builder.Services.AddScoped<IVehicleTypeServices, VehicleTypeServices>();
 //station
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<IStationRepository, StationRepository>();
-
+//promotion
+builder.Services.AddScoped<IPromotionService, PromotionService>();
+builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
 
 // ??ng k� UnitOfWork v� c�c Repository li�n quan
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
