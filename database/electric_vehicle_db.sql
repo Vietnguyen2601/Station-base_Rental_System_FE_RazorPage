@@ -410,3 +410,5 @@ INSERT INTO "Staff_Revenues" (staff_revenue_id, staff_id, revenue_date, total_re
 (gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown'), '2025-10-10 00:00:00', 500.00, 50.00, CURRENT_TIMESTAMP, TRUE),
 (gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones'), '2025-10-09 00:00:00', 450.00, 45.00, CURRENT_TIMESTAMP, TRUE);
 
+
+--SWD Project....
