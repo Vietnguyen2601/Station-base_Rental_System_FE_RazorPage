@@ -1,4 +1,4 @@
-using EVStationRental.Common.DTOs.StationDTOs;
+﻿using EVStationRental.Common.DTOs.StationDTOs;
 using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Repositories.Mapper;
 using EVStationRental.Repositories.UnitOfWork;
@@ -22,7 +22,7 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
 
         public async Task<IServiceResult> CreateStationAsync(CreateStationRequestDTO dto)
         {
-            // Ki?m tra Name kh�ng b? tr�ng
+            // Ki?m tra Name không b? trùng
             var existingStation = (await unitOfWork.StationRepository.GetAllStationsAsync())
                 .FirstOrDefault(s => s.Name == dto.Name);
             if (existingStation != null)
@@ -30,7 +30,7 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_VALIDATION_CODE,
-                    Message = "T�n tr?m ?� t?n t?i"
+                    Message = "Tên tr?m ?ã t?n t?i"
                 };
             }
 
@@ -71,7 +71,7 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                 return new ServiceResult
                 {
                     StatusCode = Const.WARNING_NO_DATA_CODE,
-                    Message = "Kh�ng c� xe n�o trong tr?m n�y"
+                    Message = "Không có xe nào trong tr?m này"
                 };
             }
             var vehicleDTOs = vehicles.Select(v => v.ToViewVehicleDTO()).ToList();
@@ -91,7 +91,7 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_VALIDATION_CODE,
-                    Message = "StationId kh�ng h?p l?"
+                    Message = "StationId không h?p l?"
                 };
             }
             if (dto.VehicleIds == null || dto.VehicleIds.Count == 0)
@@ -99,7 +99,7 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_VALIDATION_CODE,
-                    Message = "Danh s�ch xe kh�ng h?p l?"
+                    Message = "Danh sách xe không h?p l?"
                 };
             }
             var success = await unitOfWork.StationRepository.AddVehiclesToStationAsync(dto.StationId, dto.VehicleIds);
@@ -108,13 +108,13 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_EXCEPTION,
-                    Message = "Kh�ng th? th�m xe v�o station"
+                    Message = "Không th? thêm xe vào station"
                 };
             }
             return new ServiceResult
             {
                 StatusCode = Const.SUCCESS_CREATE_CODE,
-                Message = "Th�m xe v�o station th�nh c�ng"
+                Message = "Thêm xe vào station thành công"
             };
         }
 
@@ -122,9 +122,9 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
         {
             var station = await unitOfWork.StationRepository.GetStationByIdAsync(stationId);
             if (station == null)
-                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Kh�ng t�m th?y tr?m" };
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm th?y tr?m" };
 
-            // Kh�ng cho ch?nh s?a StationId
+            // Không cho ch?nh s?a StationId
             dto.MapToStation(station);
 
             var updated = await unitOfWork.StationRepository.UpdateStationAsync(station);
@@ -140,8 +140,8 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
         {
             var success = await unitOfWork.StationRepository.SoftDeleteStationAsync(stationId);
             if (!success)
-                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Kh�ng t�m th?y tr?m ho?c ?� b? x�a" };
-            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "X�a m?m tr?m th�nh c�ng" };
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm th?y tr?m ho?c ?ã b? xóa" };
+            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Xóa m?m tr?m thành công" };
         }
 
         public async Task<IServiceResult> GetActiveStationsAsync()
@@ -170,8 +170,66 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
         {
             var success = await unitOfWork.StationRepository.UpdateIsActiveAsync(stationId, isActive);
             if (!success)
-                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Kh�ng t�m th?y tr?m" };
-            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "C?p nh?t tr?ng th�i tr?m th�nh c�ng" };
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy trạm" };
+            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Cập nhật trạng thái trạm thành công" };
+        }
+
+        public async Task<IServiceResult> GetStationsByVehicleModelAsync(Guid vehicleModelId)
+        {
+            try
+            {
+                // AC1: Kiểm tra model có tồn tại không
+                var model = await unitOfWork.VehicleModelRepository.GetVehicleModelByIdAsync(vehicleModelId);
+                if (model == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Model does not exist in our system"
+                    };
+                }
+
+                // Lấy danh sách trạm và số lượng xe available
+                var stationsWithCount = await unitOfWork.StationRepository.GetStationsByVehicleModelAsync(vehicleModelId);
+
+                // AC3: Nếu không có trạm nào
+                if (stationsWithCount == null || !stationsWithCount.Any())
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = 204,
+                        Message = "No stations found for this model"
+                    };
+                }
+
+                // AC4: Map sang DTO với đầy đủ thông tin
+                var response = stationsWithCount.Select(x => new StationWithAvailableVehiclesResponse
+                {
+                    StationId = x.Station.StationId,
+                    Name = x.Station.Name,
+                    Address = x.Station.Address,
+                    Capacity = x.Station.Capacity,
+                    Lat = x.Station.Lat,
+                    Long = x.Station.Long,
+                    AvailableVehicleCount = x.AvailableVehicleCount
+                }).ToList();
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_READ_CODE,
+                    Message = "Lấy danh sách trạm thành công",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                var innerMessage = ex.InnerException?.Message ?? ex.Message;
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi lấy danh sách trạm: {innerMessage}"
+                };
+            }
         }
     }
 }

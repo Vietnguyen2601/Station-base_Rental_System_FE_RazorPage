@@ -190,5 +190,64 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
                 return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy xe" };
             return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Cập nhật trạng thái xe thành công" };
         }
+
+        public async Task<IServiceResult> GetVehicleWithHighestBatteryByModelAndStationAsync(Guid vehicleModelId, Guid stationId)
+        {
+            try
+            {
+                // Kiểm tra model có tồn tại không
+                var model = await unitOfWork.VehicleModelRepository.GetVehicleModelByIdAsync(vehicleModelId);
+                if (model == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Model không tồn tại trong hệ thống"
+                    };
+                }
+
+                // Kiểm tra station có tồn tại không
+                var station = await unitOfWork.StationRepository.GetStationByIdAsync(stationId);
+                if (station == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Trạm không tồn tại trong hệ thống"
+                    };
+                }
+
+                // Lấy xe có battery level cao nhất
+                var vehicle = await unitOfWork.VehicleRepository.GetVehicleWithHighestBatteryByModelAndStationAsync(vehicleModelId, stationId);
+
+                if (vehicle == null)
+                {
+                    // AC3: Trả về 204 No Content khi không có xe available
+                    return new ServiceResult
+                    {
+                        StatusCode = 204,
+                        Message = "No available vehicle found"
+                    };
+                }
+
+                var vehicleDto = vehicle.ToViewVehicleDTO();
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_READ_CODE,
+                    Message = "Lấy thông tin xe thành công",
+                    Data = vehicleDto
+                };
+            }
+            catch (Exception ex)
+            {
+                var innerMessage = ex.InnerException?.Message ?? ex.Message;
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi lấy thông tin xe: {innerMessage}"
+                };
+            }
+        }
     }
 }

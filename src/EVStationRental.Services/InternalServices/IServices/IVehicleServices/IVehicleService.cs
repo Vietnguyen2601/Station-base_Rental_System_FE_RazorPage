@@ -16,5 +16,6 @@ namespace EVStationRental.Services.InternalServices.IServices.IVehicleServices
         Task<IServiceResult> GetActiveVehiclesAsync();
         Task<IServiceResult> GetInactiveVehiclesAsync();
         Task<IServiceResult> UpdateIsActiveAsync(Guid vehicleId, bool isActive);
+        Task<IServiceResult> GetVehicleWithHighestBatteryByModelAndStationAsync(Guid vehicleModelId, Guid stationId);
     }
 }

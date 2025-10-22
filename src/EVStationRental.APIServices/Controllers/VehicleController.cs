@@ -99,5 +99,48 @@ namespace EVStationRental.APIServices.Controllers
             var result = await _vehicleService.UpdateIsActiveAsync(id, isActive);
             return StatusCode((int)result.StatusCode, new { Message = result.Message });
         }
+
+        /// <summary>
+        /// Lấy xe có mức pin cao nhất theo model và trạm
+        /// </summary>
+        /// <param name="vehicleModelId">ID của model xe</param>
+        /// <param name="stationId">ID của trạm</param>
+        /// <returns>Thông tin xe có battery level cao nhất</returns>
+        /// <response code="200">Trả về thông tin xe thành công</response>
+        /// <response code="204">Không có xe sẵn sàng</response>
+        /// <response code="400">Model hoặc Station không hợp lệ</response>
+        /// <response code="500">Lỗi server khi xử lý yêu cầu</response>
+        [HttpGet("highest-battery")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IServiceResult>> GetVehicleWithHighestBatteryAsync(
+            [FromQuery] Guid vehicleModelId, 
+            [FromQuery] Guid stationId)
+        {
+            if (vehicleModelId == Guid.Empty || stationId == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    StatusCode = Const.ERROR_VALIDATION_CODE,
+                    Message = "VehicleModelId và StationId là bắt buộc"
+                });
+            }
+
+            var result = await _vehicleService.GetVehicleWithHighestBatteryByModelAndStationAsync(vehicleModelId, stationId);
+            
+            // AC3: Trả về 204 No Content nếu không có xe
+            if (result.StatusCode == 204)
+            {
+                return NoContent();
+            }
+
+            return StatusCode(result.StatusCode, new 
+            { 
+                Message = result.Message, 
+                Data = result.Data 
+            });
+        }
     }
 }

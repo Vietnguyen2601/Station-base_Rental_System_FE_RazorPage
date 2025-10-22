@@ -91,5 +91,30 @@ namespace EVStationRental.Repositories.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<List<(Station Station, int AvailableVehicleCount)>> GetStationsByVehicleModelAsync(Guid vehicleModelId)
+        {
+            // L?y t?t c? xe thu?c model v?i status AVAILABLE ho?c CHARGING
+            var vehiclesByModel = await _context.Vehicles
+                .Include(v => v.Station)
+                .Where(v => v.ModelId == vehicleModelId 
+                         && v.Isactive == true 
+                         && (v.Status == Common.Enums.EnumModel.VehicleStatus.AVAILABLE 
+                             || v.Status == Common.Enums.EnumModel.VehicleStatus.CHARGING)
+                         && v.StationId != null)
+                .ToListAsync();
+
+            // Group theo station và ??m s? xe AVAILABLE (không bao g?m CHARGING)
+            var stationsWithCount = vehiclesByModel
+                .GroupBy(v => v.Station)
+                .Select(g => (
+                    Station: g.Key!,
+                    AvailableVehicleCount: g.Count(v => v.Status == Common.Enums.EnumModel.VehicleStatus.AVAILABLE)
+                ))
+                .OrderBy(x => x.Station.Name)
+                .ToList();
+
+            return stationsWithCount;
+        }
     }
 }

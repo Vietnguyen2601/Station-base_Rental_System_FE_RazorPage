@@ -82,5 +82,20 @@ namespace EVStationRental.Repositories.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<Vehicle?> GetVehicleWithHighestBatteryByModelAndStationAsync(Guid vehicleModelId, Guid stationId)
+        {
+            return await _context.Set<Vehicle>()
+                .Include(v => v.Model)
+                    .ThenInclude(m => m.Type)
+                .Include(v => v.Station)
+                .Where(v => v.ModelId == vehicleModelId 
+                         && v.StationId == stationId 
+                         && v.Isactive == true 
+                         && v.Status == Common.Enums.EnumModel.VehicleStatus.AVAILABLE)
+                .OrderByDescending(v => v.BatteryLevel)
+                .ThenByDescending(v => v.CreatedAt)
+                .FirstOrDefaultAsync();
+        }
     }
 }
