@@ -70,7 +70,6 @@ public partial class ElectricVehicleDContext : DbContext
         }
     }
 
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
@@ -86,20 +85,27 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("account_id");
             entity.Property(e => e.ContactNumber)
-                .HasMaxLength(20)
+                .HasColumnType("character varying")
                 .HasColumnName("contact_number");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
             entity.Property(e => e.Email)
-                .HasMaxLength(150)
+                .HasColumnType("character varying")
                 .HasColumnName("email");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.Password)
-                .HasMaxLength(255)
+                .HasColumnType("character varying")
                 .HasColumnName("password");
             entity.Property(e => e.RoleId).HasColumnName("role_id");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updated_at");
             entity.Property(e => e.Username)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("username");
 
             entity.HasOne(d => d.Role).WithMany(p => p.Accounts)
@@ -187,7 +193,6 @@ public partial class ElectricVehicleDContext : DbContext
 
             entity.HasOne(d => d.Staff).WithMany(p => p.OrderStaffs)
                 .HasForeignKey(d => d.StaffId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Orders_staff_id_fkey");
 
             entity.HasOne(d => d.Vehicle).WithMany(p => p.Orders)
@@ -216,11 +221,10 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("payment_date");
             entity.Property(e => e.PaymentMethod)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("payment_method");
-            // FIX: Payment.Status is a string, keep simple mapping
             entity.Property(e => e.Status)
-                .HasMaxLength(50)
+                .HasColumnType("character varying")
                 .HasColumnName("status");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
@@ -251,7 +255,7 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.PromoCode)
-                .HasMaxLength(50)
+                .HasColumnType("character varying")
                 .HasColumnName("promo_code");
             entity.Property(e => e.StartDate)
                 .HasColumnType("timestamp without time zone")
@@ -280,10 +284,10 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.ReportType)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("report_type");
             entity.Property(e => e.Text)
-                .HasMaxLength(255)
+                .HasColumnType("character varying")
                 .HasColumnName("text");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
@@ -308,12 +312,19 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.RoleId)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("role_id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.RoleName)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("role_name");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<StaffRevenue>(entity =>
@@ -356,11 +367,11 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("station_id");
             entity.Property(e => e.Address)
-                .HasMaxLength(255)
+                .HasColumnType("character varying")
                 .HasColumnName("address");
             entity.Property(e => e.Capacity).HasColumnName("capacity");
             entity.Property(e => e.ImageUrl)
-                .HasMaxLength(255)
+                .HasColumnType("character varying")
                 .HasColumnName("image_url");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
@@ -368,7 +379,7 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.Lat).HasColumnName("lat");
             entity.Property(e => e.Long).HasColumnName("long");
             entity.Property(e => e.Name)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("name");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
@@ -387,14 +398,14 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.BatteryCapacity).HasColumnName("battery_capacity");
             entity.Property(e => e.BatteryLevel).HasColumnName("battery_level");
             entity.Property(e => e.Color)
-                .HasMaxLength(50)
+                .HasColumnType("character varying")
                 .HasColumnName("color");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("created_at");
             entity.Property(e => e.Img)
-                .HasMaxLength(255)
+                .HasColumnType("character varying")
                 .HasColumnName("img");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
@@ -403,18 +414,17 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.ModelId).HasColumnName("model_id");
             entity.Property(e => e.Range).HasColumnName("range");
             entity.Property(e => e.SerialNumber)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("serial_number");
             entity.Property(e => e.StationId).HasColumnName("station_id");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
-            // NEW: map Vehicle.Status enum to PostgreSQL enum column 'status'
             entity.Property(e => e.Status)
                 .HasColumnName("status")
                 .HasConversion<string>()
                 .HasColumnType("vehicle_status");
-
+            
             entity.HasOne(d => d.Model).WithMany(p => p.Vehicles)
                 .HasForeignKey(d => d.ModelId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -440,14 +450,14 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.Manufacturer)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("manufacturer");
             entity.Property(e => e.Name)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("name");
             entity.Property(e => e.PricePerHour).HasColumnName("price_per_hour");
             entity.Property(e => e.Specs)
-                .HasMaxLength(255)
+                .HasColumnType("character varying")
                 .HasColumnName("specs");
             entity.Property(e => e.TypeId).HasColumnName("type_id");
             entity.Property(e => e.UpdatedAt)
@@ -478,7 +488,7 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.TypeName)
-                .HasMaxLength(100)
+                .HasColumnType("character varying")
                 .HasColumnName("type_name");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")

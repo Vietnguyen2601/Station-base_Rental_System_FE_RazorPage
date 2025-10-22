@@ -11,5 +11,9 @@ public partial class Role
 
     public bool Isactive { get; set; }
 
+    public DateTime CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
     public virtual ICollection<Account> Accounts { get; set; } = new List<Account>();
 }
