@@ -12,8 +12,6 @@ BEGIN
 END
 $$;
 
--- Kết nối tới database
-\connect electric_vehicle_db;
 
 -- =========================================
 -- TẠO EXTENSION & FUNCTION CƠ BẢN
