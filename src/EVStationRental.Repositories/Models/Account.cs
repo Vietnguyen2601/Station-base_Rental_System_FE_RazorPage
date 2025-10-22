@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EVStationRental.Repositories.Models;
 
@@ -20,13 +19,9 @@ public partial class Account
 
     public bool Isactive { get; set; }
 
-    [NotMapped]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime CreatedAt { get; set; }
 
-    [NotMapped]
     public DateTime? UpdatedAt { get; set; }
-
-    [NotMapped]
 
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
 

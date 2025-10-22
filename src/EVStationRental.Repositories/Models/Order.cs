@@ -21,7 +21,7 @@ public partial class Order
 
     public Guid? PromotionId { get; set; }
 
-    public Guid StaffId { get; set; }
+    public Guid? StaffId { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -37,7 +37,7 @@ public partial class Order
 
     public virtual Promotion? Promotion { get; set; }
 
-    public virtual Account Staff { get; set; } = null!;
+    public virtual Account? Staff { get; set; }
 
     public virtual Vehicle Vehicle { get; set; } = null!;
 }
