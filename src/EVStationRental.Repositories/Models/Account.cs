@@ -26,10 +26,7 @@ public partial class Account
     [NotMapped]
     public DateTime? UpdatedAt { get; set; }
 
-    // Navigation property for many-to-many relationship (if AccountRole table exists)
-    // If not, this will use the Role property instead
     [NotMapped]
-    public virtual ICollection<AccountRole> AccountRoles { get; set; } = new List<AccountRole>();
 
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
 
