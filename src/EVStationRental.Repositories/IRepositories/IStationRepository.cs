@@ -17,5 +17,6 @@ namespace EVStationRental.Repositories.IRepositories
         Task<List<Station>> GetActiveStationsAsync();
         Task<List<Station>> GetInactiveStationsAsync();
         Task<bool> UpdateIsActiveAsync(Guid stationId, bool isActive);
+        Task<List<(Station Station, int AvailableVehicleCount)>> GetStationsByVehicleModelAsync(Guid vehicleModelId);
     }
 }

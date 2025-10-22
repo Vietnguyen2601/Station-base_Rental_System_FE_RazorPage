@@ -16,5 +16,6 @@ namespace EVStationRental.Repositories.IRepositories
         Task<List<Vehicle>> GetActiveVehiclesAsync();
         Task<List<Vehicle>> GetInactiveVehiclesAsync();
         Task<bool> UpdateIsActiveAsync(Guid vehicleId, bool isActive);
+        Task<Vehicle?> GetVehicleWithHighestBatteryByModelAndStationAsync(Guid vehicleModelId, Guid stationId);
     }
 }

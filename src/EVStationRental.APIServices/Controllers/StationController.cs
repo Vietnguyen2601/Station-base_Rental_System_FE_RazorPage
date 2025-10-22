@@ -90,5 +90,48 @@ namespace EVStationRental.APIServices.Controllers
             var result = await _stationService.UpdateIsActiveAsync(id, isActive);
             return StatusCode((int)result.StatusCode, new { Message = result.Message });
         }
+
+        /// <summary>
+        /// L?y danh sách tr?m có xe theo model
+        /// </summary>
+        /// <param name="vehicleModelId">ID c?a model xe</param>
+        /// <returns>Danh sách tr?m có ít nh?t 1 xe thu?c model</returns>
+        /// <response code="200">Tr? v? danh sách tr?m thành công</response>
+        /// <response code="204">Không có tr?m nào có xe thu?c model này</response>
+        /// <response code="400">Model không h?p l?</response>
+        /// <response code="500">L?i server</response>
+        [HttpGet("by-model/{vehicleModelId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IServiceResult>> GetStationsByVehicleModelAsync(Guid vehicleModelId)
+        {
+            if (vehicleModelId == Guid.Empty)
+            {
+                return BadRequest(new
+                {
+                    StatusCode = Const.ERROR_VALIDATION_CODE,
+                    Message = "VehicleModelId là b?t bu?c"
+                });
+            }
+
+            var result = await _stationService.GetStationsByVehicleModelAsync(vehicleModelId);
+            
+            // AC3: Tr? v? 204 No Content n?u không có tr?m, có kèm message
+            if (result.StatusCode == 204)
+            {
+                return StatusCode(204, new
+                {
+                    Message = result.Message
+                });
+            }
+
+            return StatusCode(result.StatusCode, new 
+            { 
+                Message = result.Message, 
+                Data = result.Data 
+            });
+        }
     }
 }
