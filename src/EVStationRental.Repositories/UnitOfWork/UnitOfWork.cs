@@ -17,6 +17,7 @@ namespace EVStationRental.Repositories.UnitOfWork
         private IRoleRepository roleRepository;
         private IVehicleTypeRepository vehicleTypeRepository;
         private IPromotionRepository promotionRepository;
+        private IReportRepository reportRepository;
 
         public UnitOfWork()
         {
@@ -76,6 +77,14 @@ namespace EVStationRental.Repositories.UnitOfWork
             get
             {
                 return promotionRepository ??= new Repositories.PromotionRepository(_context);
+            }
+        }
+
+        public IReportRepository ReportRepository
+        {
+            get
+            {
+                return reportRepository ??= new Repositories.ReportRepository(_context);
             }
         }
     }

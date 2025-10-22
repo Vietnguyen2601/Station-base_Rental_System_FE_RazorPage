@@ -8,11 +8,13 @@ using EVStationRental.Services.InternalServices.IServices.IAuthServices;
 using EVStationRental.Services.InternalServices.IServices.IVehicleServices;
 using EVStationRental.Services.InternalServices.IServices.IStationServices;
 using EVStationRental.Services.InternalServices.IServices.IPromotionServices;
+using EVStationRental.Services.InternalServices.IServices.IReportServices;
 using EVStationRental.Services.InternalServices.Services.AccountServices;
 using EVStationRental.Services.InternalServices.Services.AuthServices;
 using EVStationRental.Services.InternalServices.Services.VehicleServices;
 using EVStationRental.Services.InternalServices.Services.StationServices;
 using EVStationRental.Services.InternalServices.Services.PromotionServices;
+using EVStationRental.Services.InternalServices.Services.ReportServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
@@ -20,7 +22,7 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ??ng k� Services 
+// Đăng ký Services 
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 //vehicle
@@ -38,8 +40,11 @@ builder.Services.AddScoped<IStationRepository, StationRepository>();
 //promotion
 builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
+//report
+builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<IReportRepository, ReportRepository>();
 
-// ??ng k� UnitOfWork v� c�c Repository li�n quan
+// Đăng ký UnitOfWork và các Repository liên quan
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<UnitOfWork>();
 builder.Services.AddDbContext<ElectricVehicleDContext>();
