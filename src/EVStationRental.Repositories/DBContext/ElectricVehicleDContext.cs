@@ -73,8 +73,8 @@ public partial class ElectricVehicleDContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
-            .HasPostgresEnum("order_status", new[] { "PENDING", "CONFIRMED", "ONGOING", "COMPLETED", "CANCELED" })
-            .HasPostgresEnum("vehicle_status", new[] { "AVAILABLE", "RENTED", "MAINTENANCE", "CHARGING" })
+            .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.OrderStatus>("order_status")
+            .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.VehicleStatus>("vehicle_status")
             .HasPostgresExtension("uuid-ossp");
 
         modelBuilder.Entity<Account>(entity =>
@@ -181,6 +181,8 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
             entity.Property(e => e.VehicleId).HasColumnName("vehicle_id");
+            entity.Property(e => e.Status)
+                .HasColumnName("status");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.OrderCustomers)
                 .HasForeignKey(d => d.CustomerId)
@@ -421,10 +423,8 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
             entity.Property(e => e.Status)
-                .HasColumnName("status")
-                .HasConversion<string>()
-                .HasColumnType("vehicle_status");
-            
+                .HasColumnName("status");
+
             entity.HasOne(d => d.Model).WithMany(p => p.Vehicles)
                 .HasForeignKey(d => d.ModelId)
                 .OnDelete(DeleteBehavior.ClientSetNull)

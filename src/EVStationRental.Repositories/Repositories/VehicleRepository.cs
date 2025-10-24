@@ -48,9 +48,32 @@ namespace EVStationRental.Repositories.Repositories
 
         public async Task<Vehicle?> UpdateVehicleAsync(Vehicle vehicle)
         {
-            _context.Set<Vehicle>().Update(vehicle);
+            // Use AsTracking to ensure changes are tracked
+            var existingVehicle = await _context.Vehicles
+                .AsTracking()
+                .FirstOrDefaultAsync(v => v.VehicleId == vehicle.VehicleId);
+                
+            if (existingVehicle == null)
+            {
+                return null;
+            }
+
+            // Update properties
+            existingVehicle.SerialNumber = vehicle.SerialNumber;
+            existingVehicle.ModelId = vehicle.ModelId;
+            existingVehicle.StationId = vehicle.StationId;
+            existingVehicle.Color = vehicle.Color;
+            existingVehicle.BatteryLevel = vehicle.BatteryLevel;
+            existingVehicle.BatteryCapacity = vehicle.BatteryCapacity;
+            existingVehicle.Range = vehicle.Range;
+            existingVehicle.LastMaintenance = vehicle.LastMaintenance;
+            existingVehicle.Status = vehicle.Status;
+            existingVehicle.Img = vehicle.Img;
+            existingVehicle.Isactive = vehicle.Isactive;
+            existingVehicle.UpdatedAt = vehicle.UpdatedAt;
+
             await _context.SaveChangesAsync();
-            return vehicle;
+            return existingVehicle;
         }
 
         public async Task<bool> SoftDeleteVehicleAsync(Guid vehicleId)

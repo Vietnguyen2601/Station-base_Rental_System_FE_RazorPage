@@ -279,3 +279,35 @@ appsettings*.json  # Bắt tất cả các biến thể như appsettings.Develop
 
 
 # End of https://www.toptal.com/developers/gitignore/api/aspnetcore
+
+# ================================
+# Documentation Files (Local Only) - Do NOT push to Git
+# ================================
+src/*.md
+src/*.sql
+src/*.backup
+src/TROUBLESHOOTING*.md
+src/FIX_*.md
+src/API_*.md
+src/COMPLETE_*.md
+src/ENUM_*.md
+src/FINAL_*.md
+src/Debug_*.sql
+src/Check_*.sql
+src/Fix_*.sql
+src/Test_*.sql
+src/Database_*.sql
+
+# Specific documentation files
+API_ORDER_DOCUMENTATION.md
+Database_Migration_Add_Order_Status.sql
+TROUBLESHOOTING_ORDER_API.md
+Check_And_Fix_Orders_Table.sql
+FINAL_ENUM_SOLUTION.md
+Debug_Enum_Values.sql
+FIX_ENUM_NOT_FOUND_ERROR.md
+FIX_ENUM_SERIALIZATION.md
+Fix_Enum_Values_In_Database.sql
+Test_Enum_Mapping.sql
+COMPLETE_ENUM_FIX.md
+ENUM_MAPPING_FIX.md
