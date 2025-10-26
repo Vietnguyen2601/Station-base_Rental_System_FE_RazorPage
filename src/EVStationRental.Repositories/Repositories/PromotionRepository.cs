@@ -10,9 +10,9 @@ namespace EVStationRental.Repositories.Repositories
 {
     public class PromotionRepository : IPromotionRepository
     {
-        private readonly ElectricVehicleDContext _context;
+        private readonly ElectricVehicleDBContext _context;
 
-        public PromotionRepository(ElectricVehicleDContext context)
+        public PromotionRepository(ElectricVehicleDBContext context)
         {
             _context = context;
         }

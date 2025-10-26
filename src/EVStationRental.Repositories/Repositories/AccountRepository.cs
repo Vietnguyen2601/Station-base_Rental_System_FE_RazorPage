@@ -12,7 +12,7 @@ namespace EVStationRental.Repositories.Repositories
         {
         }
 
-        public AccountRepository(ElectricVehicleDContext context)
+        public AccountRepository(ElectricVehicleDBContext context)
             => _context = context;
 
         public async Task<Account?> GetByUsernameAsync(string username)

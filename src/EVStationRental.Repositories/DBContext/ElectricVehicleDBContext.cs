@@ -6,13 +6,13 @@ using System.Collections.Generic;
 
 namespace EVStationRental.Repositories.DBContext;
 
-public partial class ElectricVehicleDContext : DbContext
+public partial class ElectricVehicleDBContext : DbContext
 {
-    public ElectricVehicleDContext()
+    public ElectricVehicleDBContext()
     {
     }
 
-    public ElectricVehicleDContext(DbContextOptions<ElectricVehicleDContext> options)
+    public ElectricVehicleDBContext(DbContextOptions<ElectricVehicleDBContext> options)
         : base(options)
     {
     }
@@ -61,21 +61,13 @@ public partial class ElectricVehicleDContext : DbContext
         return connectionString;
     }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseNpgsql(GetConnectionString("DefaultConnection"))
-            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-        }
-    }
-
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
             .HasPostgresEnum("order_status", new[] { "PENDING", "CONFIRMED", "ONGOING", "COMPLETED", "CANCELED" })
+            .HasPostgresEnum("payment_type_enum", new[] { "DEPOSIT", "FINAL", "REFUND" })
             .HasPostgresEnum("vehicle_status", new[] { "AVAILABLE", "RENTED", "MAINTENANCE", "CHARGING" })
+            .HasPostgresExtension("pgcrypto")
             .HasPostgresExtension("uuid-ossp");
 
         modelBuilder.Entity<Account>(entity =>
@@ -88,6 +80,10 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.ContactNumber)
                 .HasMaxLength(20)
                 .HasColumnName("contact_number");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
             entity.Property(e => e.Email)
                 .HasMaxLength(150)
                 .HasColumnName("email");
@@ -98,6 +94,9 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("password");
             entity.Property(e => e.RoleId).HasColumnName("role_id");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updated_at");
             entity.Property(e => e.Username)
                 .HasMaxLength(100)
                 .HasColumnName("username");
@@ -151,6 +150,7 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.OrderId)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("order_id");
+            entity.Property(e => e.BasePrice).HasColumnName("base_price");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
@@ -187,7 +187,6 @@ public partial class ElectricVehicleDContext : DbContext
 
             entity.HasOne(d => d.Staff).WithMany(p => p.OrderStaffs)
                 .HasForeignKey(d => d.StaffId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Orders_staff_id_fkey");
 
             entity.HasOne(d => d.Vehicle).WithMany(p => p.Orders)
@@ -200,6 +199,14 @@ public partial class ElectricVehicleDContext : DbContext
         {
             entity.HasKey(e => e.PaymentId).HasName("Payments_pkey");
 
+            entity.HasIndex(e => e.GatewayTxId, "ux_payments_gateway_tx_id")
+                .IsUnique()
+                .HasFilter("(gateway_tx_id IS NOT NULL)");
+
+            entity.HasIndex(e => e.IdempotencyKey, "ux_payments_idempotency")
+                .IsUnique()
+                .HasFilter("(idempotency_key IS NOT NULL)");
+
             entity.Property(e => e.PaymentId)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("payment_id");
@@ -208,6 +215,15 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("created_at");
+            entity.Property(e => e.GatewayResponse)
+                .HasColumnType("jsonb")
+                .HasColumnName("gateway_response");
+            entity.Property(e => e.GatewayTxId)
+                .HasMaxLength(255)
+                .HasColumnName("gateway_tx_id");
+            entity.Property(e => e.IdempotencyKey)
+                .HasMaxLength(255)
+                .HasColumnName("idempotency_key");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
@@ -218,7 +234,6 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.PaymentMethod)
                 .HasMaxLength(100)
                 .HasColumnName("payment_method");
-            // FIX: Payment.Status is a string, keep simple mapping
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasColumnName("status");
@@ -308,12 +323,19 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.RoleId)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("role_id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.RoleName)
                 .HasMaxLength(100)
                 .HasColumnName("role_name");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updated_at");
         });
 
         modelBuilder.Entity<StaffRevenue>(entity =>
@@ -359,6 +381,10 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("address");
             entity.Property(e => e.Capacity).HasColumnName("capacity");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
             entity.Property(e => e.ImageUrl)
                 .HasMaxLength(255)
                 .HasColumnName("image_url");
@@ -409,11 +435,6 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
-            // NEW: map Vehicle.Status enum to PostgreSQL enum column 'status'
-            entity.Property(e => e.Status)
-                .HasColumnName("status")
-                .HasConversion<string>()
-                .HasColumnType("vehicle_status");
 
             entity.HasOne(d => d.Model).WithMany(p => p.Vehicles)
                 .HasForeignKey(d => d.ModelId)

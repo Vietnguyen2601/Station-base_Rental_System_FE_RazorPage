@@ -47,7 +47,7 @@ builder.Services.AddScoped<IReportRepository, ReportRepository>();
 // Đăng ký UnitOfWork và các Repository liên quan
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<UnitOfWork>();
-builder.Services.AddDbContext<ElectricVehicleDContext>();
+builder.Services.AddDbContext<ElectricVehicleDBContext>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
