@@ -16,5 +16,6 @@ namespace EVStationRental.Services.InternalServices.IServices.IStationServices
         Task<IServiceResult> GetActiveStationsAsync();
         Task<IServiceResult> GetInactiveStationsAsync();
         Task<IServiceResult> UpdateIsActiveAsync(Guid stationId, bool isActive);
+        Task<IServiceResult> GetStationsByVehicleModelAsync(Guid vehicleModelId);
     }
 }

@@ -95,10 +95,10 @@ CREATE TABLE "Roles" (
 
 CREATE TABLE "Accounts" (
   account_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  username VARCHAR(100) NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  email VARCHAR(150) NOT NULL,
-  contact_number VARCHAR(20),
+  username VARCHAR NOT NULL,
+  password VARCHAR NOT NULL,
+  email VARCHAR NOT NULL,
+  contact_number VARCHAR,
   role_id UUID NOT NULL,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -108,7 +108,7 @@ CREATE TABLE "Accounts" (
 
 CREATE TABLE "VehicleTypes" (
   vehicle_type_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  type_name VARCHAR(100) UNIQUE NOT NULL,
+  type_name VARCHAR NOT NULL UNIQUE,
   description TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
@@ -118,10 +118,10 @@ CREATE TABLE "VehicleTypes" (
 CREATE TABLE "VehicleModels" (
   vehicle_model_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   type_id UUID NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  manufacturer VARCHAR(100) NOT NULL,
+  name VARCHAR NOT NULL,
+  manufacturer VARCHAR NOT NULL,
   price_per_hour DECIMAL NOT NULL,
-  specs VARCHAR(255),
+  specs VARCHAR,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
   updated_at TIMESTAMP,
@@ -130,12 +130,12 @@ CREATE TABLE "VehicleModels" (
 
 CREATE TABLE "Stations" (
   station_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name VARCHAR(100) NOT NULL,
-  address VARCHAR(255) NOT NULL,
+  name VARCHAR NOT NULL,
+  address VARCHAR NOT NULL,
   lat DECIMAL NOT NULL,
   long DECIMAL NOT NULL,
   capacity INT NOT NULL,
-  image_url VARCHAR(255),
+  image_url VARCHAR,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP
@@ -143,16 +143,16 @@ CREATE TABLE "Stations" (
 
 CREATE TABLE "Vehicles" (
   vehicle_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  serial_number VARCHAR(100) UNIQUE NOT NULL,
+  serial_number VARCHAR NOT NULL UNIQUE,
   model_id UUID NOT NULL,
   station_id UUID,
   status vehicle_status NOT NULL DEFAULT 'AVAILABLE',
   battery_level INT,
   battery_capacity INT,
   range INT,
-  color VARCHAR(50),
+  color VARCHAR,
   last_maintenance DATE,
-  img VARCHAR(255),
+  img VARCHAR,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
   updated_at TIMESTAMP,
@@ -162,7 +162,7 @@ CREATE TABLE "Vehicles" (
 
 CREATE TABLE "Promotions" (
   promotion_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  promo_code VARCHAR(50) NOT NULL,
+  promo_code VARCHAR NOT NULL,
   discount_percentage DECIMAL NOT NULL,
   start_date TIMESTAMP NOT NULL,
   end_date TIMESTAMP NOT NULL,
@@ -225,9 +225,9 @@ CREATE TABLE "Feedbacks" (
 
 CREATE TABLE "Reports" (
   report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  report_type VARCHAR(100) NOT NULL,
+  report_type VARCHAR NOT NULL,
   generated_date TIMESTAMP NOT NULL,
-  text VARCHAR(255) NOT NULL,
+  text VARCHAR NOT NULL,
   account_id UUID NOT NULL,
   vehicle_id UUID NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -268,8 +268,8 @@ CREATE TRIGGER set_staff_revenues_created_at BEFORE INSERT ON "Staff_Revenues" F
 -- =========================================
 -- TRIGGERS updated_at
 -- =========================================
-CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON "Accounts" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_roles_updated_at BEFORE UPDATE ON "Roles" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON "Accounts" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_vehicle_types_updated_at BEFORE UPDATE ON "VehicleTypes" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_vehicle_models_updated_at BEFORE UPDATE ON "VehicleModels" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_vehicles_updated_at BEFORE UPDATE ON "Vehicles" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -948,3 +948,4 @@ INSERT INTO "Staff_Revenues" (staff_revenue_id, staff_id, revenue_date, total_re
 (gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), '2025-10-10 00:00:00', 500.00, 50.00, CURRENT_TIMESTAMP, TRUE),
 (gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), '2025-10-09 00:00:00', 450.00, 45.00, CURRENT_TIMESTAMP, TRUE);
 
+--SWDDD

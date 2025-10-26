@@ -9,18 +9,39 @@ using EVStationRental.Services.InternalServices.IServices.IVehicleServices;
 using EVStationRental.Services.InternalServices.IServices.IStationServices;
 using EVStationRental.Services.InternalServices.IServices.IPromotionServices;
 using EVStationRental.Services.InternalServices.IServices.IReportServices;
+using EVStationRental.Services.InternalServices.IServices.IOrderServices;
 using EVStationRental.Services.InternalServices.Services.AccountServices;
 using EVStationRental.Services.InternalServices.Services.AuthServices;
 using EVStationRental.Services.InternalServices.Services.VehicleServices;
 using EVStationRental.Services.InternalServices.Services.StationServices;
 using EVStationRental.Services.InternalServices.Services.PromotionServices;
 using EVStationRental.Services.InternalServices.Services.ReportServices;
+using EVStationRental.Services.InternalServices.Services.OrderServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// IMPORTANT: Reset and Map PostgreSQL Enums
+try
+{
+    // Reset any previous mappings
+    Npgsql.NpgsqlConnection.GlobalTypeMapper.Reset();
+    
+    // Map enums with proper names
+    Npgsql.NpgsqlConnection.GlobalTypeMapper.MapEnum<EVStationRental.Common.Enums.EnumModel.OrderStatus>("order_status", 
+        nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
+    Npgsql.NpgsqlConnection.GlobalTypeMapper.MapEnum<EVStationRental.Common.Enums.EnumModel.VehicleStatus>("vehicle_status",
+        nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[ENUM MAPPING ERROR] {ex.Message}");
+}
 
 // Đăng ký Services 
 builder.Services.AddScoped<IAccountService, AccountService>();
@@ -43,16 +64,23 @@ builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
 //report
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
+//order
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 // Đăng ký UnitOfWork và các Repository liên quan
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<UnitOfWork>();
 builder.Services.AddDbContext<ElectricVehicleDBContext>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

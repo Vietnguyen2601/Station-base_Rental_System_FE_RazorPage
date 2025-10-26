@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using EVStationRental.Common.Enums.EnumModel;
 
 namespace EVStationRental.Repositories.Models;
 
@@ -30,6 +31,8 @@ public partial class Order
     public DateTime? UpdatedAt { get; set; }
 
     public bool Isactive { get; set; }
+
+    public OrderStatus Status { get; set; }
 
     public virtual Account Customer { get; set; } = null!;
 

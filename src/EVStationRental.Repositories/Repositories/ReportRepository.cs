@@ -16,6 +16,7 @@ namespace EVStationRental.Repositories.Repositories
         {
             return await _context.Reports
                 .Include(r => r.Account)
+                    .ThenInclude(a => a.Role)
                 .Include(r => r.Vehicle)
                 .Where(r => r.Isactive)
                 .ToListAsync();
@@ -25,8 +26,34 @@ namespace EVStationRental.Repositories.Repositories
         {
             return await _context.Reports
                 .Include(r => r.Account)
+                    .ThenInclude(a => a.Role)
                 .Include(r => r.Vehicle)
                 .FirstOrDefaultAsync(r => r.ReportId == id && r.Isactive);
+        }
+
+        public async Task<List<Report>> GetByAccountIdAsync(Guid accountId)
+        {
+            return await _context.Reports
+                .Include(r => r.Account)
+                    .ThenInclude(a => a.Role)
+                .Include(r => r.Vehicle)
+                .Where(r => r.AccountId == accountId && r.Isactive)
+                .OrderByDescending(r => r.GeneratedDate)
+                .ToListAsync();
+        }
+
+        public async Task<Order?> GetLatestOrderByCustomerAndVehicleAsync(Guid customerId, Guid vehicleId)
+        {
+            return await _context.Orders
+                .Where(o => o.CustomerId == customerId && o.VehicleId == vehicleId && o.Isactive)
+                .OrderByDescending(o => o.OrderDate)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<bool> HasCustomerRentedVehicleAsync(Guid customerId, Guid vehicleId)
+        {
+            return await _context.Orders
+                .AnyAsync(o => o.CustomerId == customerId && o.VehicleId == vehicleId && o.Isactive);
         }
     }
 }
