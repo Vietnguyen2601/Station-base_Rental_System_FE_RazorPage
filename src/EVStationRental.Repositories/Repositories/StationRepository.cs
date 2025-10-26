@@ -11,9 +11,9 @@ namespace EVStationRental.Repositories.Repositories
 {
     public class StationRepository : IStationRepository
     {
-        private readonly ElectricVehicleDContext _context;
+        private readonly ElectricVehicleDBContext _context;
 
-        public StationRepository(ElectricVehicleDContext context)
+        public StationRepository(ElectricVehicleDBContext context)
         {
             _context = context;
         }

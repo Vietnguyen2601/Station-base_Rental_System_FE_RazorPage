@@ -17,6 +17,12 @@ public partial class Payment
 
     public string Status { get; set; } = null!;
 
+    public string? GatewayTxId { get; set; }
+
+    public string? GatewayResponse { get; set; }
+
+    public string? IdempotencyKey { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

@@ -7,9 +7,9 @@ namespace EVStationRental.Repositories.Repositories;
 
 public class AuthRepository : IAuthRepository
 {
-    private readonly ElectricVehicleDContext _context;
+    private readonly ElectricVehicleDBContext _context;
 
-    public AuthRepository(ElectricVehicleDContext context)
+    public AuthRepository(ElectricVehicleDBContext context)
     {
         _context = context;
     }

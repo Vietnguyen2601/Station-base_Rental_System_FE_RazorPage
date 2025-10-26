@@ -71,10 +71,7 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 // Đăng ký UnitOfWork và các Repository liên quan
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<UnitOfWork>();
-
-// Configure DbContext
-builder.Services.AddDbContext<ElectricVehicleDContext>();
-
+builder.Services.AddDbContext<ElectricVehicleDBContext>();
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 
 

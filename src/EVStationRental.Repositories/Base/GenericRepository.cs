@@ -9,14 +9,14 @@ namespace EVStationRental.Repositories.Base
 {
     public class GenericRepository<T> : IGenericRepository<T> where T : class
     {
-        protected ElectricVehicleDContext _context;
+        protected ElectricVehicleDBContext _context;
 
         public GenericRepository()
         {
-            _context ??= new ElectricVehicleDContext();
+            _context ??= new ElectricVehicleDBContext();
         }
 
-        public GenericRepository(ElectricVehicleDContext context)
+        public GenericRepository(ElectricVehicleDBContext context)
         {
             _context = context;
         }

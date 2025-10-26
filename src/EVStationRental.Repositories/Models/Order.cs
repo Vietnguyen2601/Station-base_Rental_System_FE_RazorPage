@@ -18,6 +18,8 @@ public partial class Order
 
     public DateTime? EndTime { get; set; }
 
+    public decimal BasePrice { get; set; }
+
     public decimal TotalPrice { get; set; }
 
     public Guid? PromotionId { get; set; }

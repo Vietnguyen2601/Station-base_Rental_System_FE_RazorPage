@@ -6,13 +6,13 @@ using System.Collections.Generic;
 
 namespace EVStationRental.Repositories.DBContext;
 
-public partial class ElectricVehicleDContext : DbContext
+public partial class ElectricVehicleDBContext : DbContext
 {
-    public ElectricVehicleDContext()
+    public ElectricVehicleDBContext()
     {
     }
 
-    public ElectricVehicleDContext(DbContextOptions<ElectricVehicleDContext> options)
+    public ElectricVehicleDBContext(DbContextOptions<ElectricVehicleDBContext> options)
         : base(options)
     {
     }
@@ -59,15 +59,6 @@ public partial class ElectricVehicleDContext : DbContext
 
         string connectionString = config.GetConnectionString(connectionStringName);
         return connectionString;
-    }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        if (!optionsBuilder.IsConfigured)
-        {
-            optionsBuilder.UseNpgsql(GetConnectionString("DefaultConnection"))
-            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-        }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -157,6 +148,7 @@ public partial class ElectricVehicleDContext : DbContext
             entity.Property(e => e.OrderId)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("order_id");
+            entity.Property(e => e.BasePrice).HasColumnName("base_price");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
@@ -207,6 +199,14 @@ public partial class ElectricVehicleDContext : DbContext
         {
             entity.HasKey(e => e.PaymentId).HasName("Payments_pkey");
 
+            entity.HasIndex(e => e.GatewayTxId, "ux_payments_gateway_tx_id")
+                .IsUnique()
+                .HasFilter("(gateway_tx_id IS NOT NULL)");
+
+            entity.HasIndex(e => e.IdempotencyKey, "ux_payments_idempotency")
+                .IsUnique()
+                .HasFilter("(idempotency_key IS NOT NULL)");
+
             entity.Property(e => e.PaymentId)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("payment_id");
@@ -215,6 +215,15 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("created_at");
+            entity.Property(e => e.GatewayResponse)
+                .HasColumnType("jsonb")
+                .HasColumnName("gateway_response");
+            entity.Property(e => e.GatewayTxId)
+                .HasMaxLength(255)
+                .HasColumnName("gateway_tx_id");
+            entity.Property(e => e.IdempotencyKey)
+                .HasMaxLength(255)
+                .HasColumnName("idempotency_key");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
@@ -372,6 +381,10 @@ public partial class ElectricVehicleDContext : DbContext
                 .HasColumnType("character varying")
                 .HasColumnName("address");
             entity.Property(e => e.Capacity).HasColumnName("capacity");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
             entity.Property(e => e.ImageUrl)
                 .HasColumnType("character varying")
                 .HasColumnName("image_url");

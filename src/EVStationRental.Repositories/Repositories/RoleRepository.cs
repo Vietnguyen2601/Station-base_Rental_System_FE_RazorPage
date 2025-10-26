@@ -12,7 +12,7 @@ namespace EVStationRental.Repositories.Repositories
         {
         }
 
-        public RoleRepository(ElectricVehicleDContext context)
+        public RoleRepository(ElectricVehicleDBContext context)
             => _context = context;
 
         public async Task<Role?> GetRoleByNameAsync(string roleName)

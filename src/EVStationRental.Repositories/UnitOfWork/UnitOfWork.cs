@@ -8,7 +8,7 @@ namespace EVStationRental.Repositories.UnitOfWork
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly ElectricVehicleDContext _context;
+        private readonly ElectricVehicleDBContext _context;
 
         private IAccountRepository accountRepository;
         private IVehicleRepository vehicleRepository;
@@ -22,7 +22,7 @@ namespace EVStationRental.Repositories.UnitOfWork
 
         public UnitOfWork()
         {
-          _context = new ElectricVehicleDContext();
+          _context = new ElectricVehicleDBContext();
         }
 
         public IAccountRepository AccountRepository

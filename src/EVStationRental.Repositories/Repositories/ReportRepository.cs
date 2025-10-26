@@ -8,7 +8,7 @@ namespace EVStationRental.Repositories.Repositories
 {
     public class ReportRepository : GenericRepository<Report>, IReportRepository
     {
-        public ReportRepository(ElectricVehicleDContext context) : base(context)
+        public ReportRepository(ElectricVehicleDBContext context) : base(context)
         {
         }
 
