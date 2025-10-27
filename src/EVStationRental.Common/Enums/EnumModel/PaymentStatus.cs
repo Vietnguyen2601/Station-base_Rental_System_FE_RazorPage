@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 
 namespace EVStationRental.Common.Enums.EnumModel
 {
-    public enum OrderStatus
+    public enum PaymentStatus
     {
         PENDING,
-        CONFIRMED,
-        ONGOING,
+        PROCESSING,
         COMPLETED,
+        FAILED,
         CANCELED,
-        REFUNDED
+        REFUNDED,
+        PARTIAL_REFUND
     }
 }

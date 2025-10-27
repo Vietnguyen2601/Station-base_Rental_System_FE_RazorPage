@@ -30,12 +30,12 @@ namespace EVStationRental.APIServices.Controllers
             var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (customerIdClaim == null)
             {
-                return Unauthorized(new { message = "Kh�ng th? x�c th?c ng??i d�ng" });
+                return Unauthorized(new { message = "Không thể xác thực người dùng" });
             }
 
             if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
             {
-                return Unauthorized(new { message = "ID ng??i d�ng kh�ng h?p l?" });
+                return Unauthorized(new { message = "ID người dùng không hợp lệ" });
             }
 
             var result = await _orderService.CreateOrderAsync(customerId, request);
@@ -50,7 +50,7 @@ namespace EVStationRental.APIServices.Controllers
         }
 
         /// <summary>
-        /// L?y th�ng tin ??n ??t xe theo ID
+        /// Lấy thông tin đơn đặt xe theo ID
         /// </summary>
         [HttpGet("{orderId}")]
         public async Task<IActionResult> GetOrderById(Guid orderId)
@@ -66,7 +66,7 @@ namespace EVStationRental.APIServices.Controllers
         }
 
         /// <summary>
-        /// L?y danh s�ch ??n ??t xe c?a kh�ch h�ng hi?n t?i
+        /// Lấy danh sách đơn đặt xe của khách hàng hiện tại
         /// </summary>
         [HttpGet("my-orders")]
         public async Task<IActionResult> GetMyOrders()
@@ -74,12 +74,12 @@ namespace EVStationRental.APIServices.Controllers
             var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (customerIdClaim == null)
             {
-                return Unauthorized(new { message = "Kh�ng th? x�c th?c ng??i d�ng" });
+                return Unauthorized(new { message = "Không thể xác thực người dùng" });
             }
 
             if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
             {
-                return Unauthorized(new { message = "ID ng??i d�ng kh�ng h?p l?" });
+                return Unauthorized(new { message = "ID người dùng không hợp lệ" });
             }
 
             var result = await _orderService.GetOrdersByCustomerIdAsync(customerId);
@@ -92,7 +92,7 @@ namespace EVStationRental.APIServices.Controllers
         }
 
         /// <summary>
-        /// H?y ??n ??t xe
+        /// Hủy đơn đặt xe
         /// </summary>
         [HttpPut("{orderId}/cancel")]
         public async Task<IActionResult> CancelOrder(Guid orderId)
@@ -100,12 +100,12 @@ namespace EVStationRental.APIServices.Controllers
             var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (customerIdClaim == null)
             {
-                return Unauthorized(new { message = "Kh�ng th? x�c th?c ng??i d�ng" });
+                return Unauthorized(new { message = "Không thể xác thực người dùng" });
             }
 
             if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
             {
-                return Unauthorized(new { message = "ID ng??i d�ng kh�ng h?p l?" });
+                return Unauthorized(new { message = "ID người dùng không hợp lệ" });
             }
 
             var result = await _orderService.CancelOrderAsync(orderId, customerId);
