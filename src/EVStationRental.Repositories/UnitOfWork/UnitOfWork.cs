@@ -19,6 +19,7 @@ namespace EVStationRental.Repositories.UnitOfWork
         private IPromotionRepository promotionRepository;
         private IReportRepository reportRepository;
         private IOrderRepository orderRepository;
+        private IPaymentRepository paymentRepository;
 
         public UnitOfWork()
         {
@@ -94,6 +95,14 @@ namespace EVStationRental.Repositories.UnitOfWork
             get
             {
                 return orderRepository ??= new Repositories.OrderRepository(_context);
+            }
+        }
+
+        public IPaymentRepository PaymentRepository
+        {
+            get
+            {
+                return paymentRepository ??= new Repositories.PaymentRepository(_context);
             }
         }
     }

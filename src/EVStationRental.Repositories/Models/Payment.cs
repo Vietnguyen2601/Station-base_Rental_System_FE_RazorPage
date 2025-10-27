@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using EVStationRental.Common.Enums.EnumModel;
 
 namespace EVStationRental.Repositories.Models;
 
@@ -14,6 +16,9 @@ public partial class Payment
     public DateTime PaymentDate { get; set; }
 
     public string PaymentMethod { get; set; } = null!;
+
+    [Column("payment_type")]
+    public PaymentType PaymentType { get; set; } = PaymentType.DEPOSIT; // Default to DEPOSIT
 
     public string Status { get; set; } = null!;
 

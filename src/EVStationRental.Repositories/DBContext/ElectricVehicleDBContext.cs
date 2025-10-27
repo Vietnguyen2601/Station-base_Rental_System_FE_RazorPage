@@ -61,11 +61,20 @@ public partial class ElectricVehicleDBContext : DbContext
         return connectionString;
     }
 
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        if (!optionsBuilder.IsConfigured)
+        {
+            optionsBuilder.UseNpgsql(GetConnectionString("DefaultConnection"))
+            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
+        }
+    }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
             .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.OrderStatus>("order_status")
             .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.VehicleStatus>("vehicle_status")
+            .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.PaymentType>("payment_type_enum")
             .HasPostgresExtension("uuid-ossp");
 
         modelBuilder.Entity<Account>(entity =>
@@ -231,9 +240,13 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.PaymentDate)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("payment_date");
+            entity.Property(e => e.PaymentType)
+                .HasColumnName("payment_type");
+
             entity.Property(e => e.PaymentMethod)
                 .HasColumnType("character varying")
                 .HasColumnName("payment_method");
+
             entity.Property(e => e.Status)
                 .HasColumnType("character varying")
                 .HasColumnName("status");

@@ -1,4 +1,5 @@
 using EVStationRental.Common.Middleware.Validation;
+using EVStationRental.Common.Enums.EnumModel;
 using EVStationRental.Repositories.DBContext;
 using EVStationRental.Repositories.IRepositories;
 using EVStationRental.Repositories.Repositories;
@@ -10,6 +11,7 @@ using EVStationRental.Services.InternalServices.IServices.IStationServices;
 using EVStationRental.Services.InternalServices.IServices.IPromotionServices;
 using EVStationRental.Services.InternalServices.IServices.IReportServices;
 using EVStationRental.Services.InternalServices.IServices.IOrderServices;
+using EVStationRental.Services.InternalServices.IServices.IPaymentServices;
 using EVStationRental.Services.InternalServices.Services.AccountServices;
 using EVStationRental.Services.InternalServices.Services.AuthServices;
 using EVStationRental.Services.InternalServices.Services.VehicleServices;
@@ -17,6 +19,10 @@ using EVStationRental.Services.InternalServices.Services.StationServices;
 using EVStationRental.Services.InternalServices.Services.PromotionServices;
 using EVStationRental.Services.InternalServices.Services.ReportServices;
 using EVStationRental.Services.InternalServices.Services.OrderServices;
+using EVStationRental.Services.InternalServices.Services.PaymentServices;
+using EVStationRental.Services.InternalServices.Services.PaymentServices;
+using EVStationRental.Services.ExternalService.IServices;
+using EVStationRental.Services.ExternalService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +42,8 @@ try
     Npgsql.NpgsqlConnection.GlobalTypeMapper.MapEnum<EVStationRental.Common.Enums.EnumModel.OrderStatus>("order_status", 
         nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
     Npgsql.NpgsqlConnection.GlobalTypeMapper.MapEnum<EVStationRental.Common.Enums.EnumModel.VehicleStatus>("vehicle_status",
+        nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
+    Npgsql.NpgsqlConnection.GlobalTypeMapper.MapEnum<EVStationRental.Common.Enums.EnumModel.PaymentType>("payment_type_enum",
         nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
 }
 catch (Exception ex)
@@ -67,11 +75,17 @@ builder.Services.AddScoped<IReportRepository, ReportRepository>();
 //order
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+//payment
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<IVNPayService, VNPayService>();
+builder.Services.AddScoped<DatabasePaymentService>(); // Add database payment service
 
 // Đăng ký UnitOfWork và các Repository liên quan
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<UnitOfWork>();
-builder.Services.AddDbContext<ElectricVehicleDBContext>();
+builder.Services.AddDbContext<ElectricVehicleDBContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IAuthRepository, AuthRepository>();
 
 

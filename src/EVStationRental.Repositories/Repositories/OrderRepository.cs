@@ -13,9 +13,9 @@ namespace EVStationRental.Repositories.Repositories
 {
     public class OrderRepository : GenericRepository<Order>, IOrderRepository
     {
-        private readonly ElectricVehicleDContext _context;
+        private readonly ElectricVehicleDBContext _context;
 
-        public OrderRepository(ElectricVehicleDContext context) : base(context)
+        public OrderRepository(ElectricVehicleDBContext context) : base(context)
         {
             _context = context;
         }

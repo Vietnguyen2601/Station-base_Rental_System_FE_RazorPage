@@ -1,0 +1,23 @@
+### Test VNPay Payment Creation with new credentials
+POST https://localhost:7172/api/Payment/test
+Content-Type: application/json
+
+{
+    "orderId": "TEST001",
+    "amount": 50000,
+    "description": "TestPayment",
+    "returnUrl": "https://localhost:7172/api/Payment/vnpay-return"
+}
+
+### Test VNPay Payment Creation without cancelUrl
+POST https://localhost:7172/api/Payment/test
+Content-Type: application/json
+
+{
+    "orderId": "TEST002", 
+    "amount": 50000,
+    "orderInfo": "Test payment no cancel URL",
+    "ipAddress": "127.0.0.1",
+    "returnUrl": "https://localhost:7172/api/Payment/vnpay-return",
+    "cancelUrl": ""
+}

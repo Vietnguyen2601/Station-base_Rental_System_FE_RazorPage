@@ -30,12 +30,12 @@ namespace EVStationRental.APIServices.Controllers
             var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (customerIdClaim == null)
             {
-                return Unauthorized(new { message = "Không th? xác th?c ng??i dùng" });
+                return Unauthorized(new { message = "Khï¿½ng th? xï¿½c th?c ng??i dï¿½ng" });
             }
 
             if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
             {
-                return Unauthorized(new { message = "ID ng??i dùng không h?p l?" });
+                return Unauthorized(new { message = "ID ng??i dï¿½ng khï¿½ng h?p l?" });
             }
 
             var result = await _orderService.CreateOrderAsync(customerId, request);
@@ -50,7 +50,7 @@ namespace EVStationRental.APIServices.Controllers
         }
 
         /// <summary>
-        /// L?y thông tin ??n ??t xe theo ID
+        /// L?y thï¿½ng tin ??n ??t xe theo ID
         /// </summary>
         [HttpGet("{orderId}")]
         public async Task<IActionResult> GetOrderById(Guid orderId)
@@ -66,7 +66,7 @@ namespace EVStationRental.APIServices.Controllers
         }
 
         /// <summary>
-        /// L?y danh sách ??n ??t xe c?a khách hàng hi?n t?i
+        /// L?y danh sï¿½ch ??n ??t xe c?a khï¿½ch hï¿½ng hi?n t?i
         /// </summary>
         [HttpGet("my-orders")]
         public async Task<IActionResult> GetMyOrders()
@@ -74,12 +74,12 @@ namespace EVStationRental.APIServices.Controllers
             var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (customerIdClaim == null)
             {
-                return Unauthorized(new { message = "Không th? xác th?c ng??i dùng" });
+                return Unauthorized(new { message = "Khï¿½ng th? xï¿½c th?c ng??i dï¿½ng" });
             }
 
             if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
             {
-                return Unauthorized(new { message = "ID ng??i dùng không h?p l?" });
+                return Unauthorized(new { message = "ID ng??i dï¿½ng khï¿½ng h?p l?" });
             }
 
             var result = await _orderService.GetOrdersByCustomerIdAsync(customerId);
@@ -100,12 +100,12 @@ namespace EVStationRental.APIServices.Controllers
             var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (customerIdClaim == null)
             {
-                return Unauthorized(new { message = "Không th? xác th?c ng??i dùng" });
+                return Unauthorized(new { message = "Khï¿½ng th? xï¿½c th?c ng??i dï¿½ng" });
             }
 
             if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
             {
-                return Unauthorized(new { message = "ID ng??i dùng không h?p l?" });
+                return Unauthorized(new { message = "ID ng??i dï¿½ng khï¿½ng h?p l?" });
             }
 
             var result = await _orderService.CancelOrderAsync(orderId, customerId);

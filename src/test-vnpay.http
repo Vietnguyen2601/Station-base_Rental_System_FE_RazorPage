@@ -1,0 +1,32 @@
+### Test VNPay with NEW credentials - TmnCode: 1F8VH8CA
+POST https://localhost:7095/api/Payment/create
+Content-Type: application/json
+
+{
+  "orderId": "123e4567-e89b-12d3-a456-426614174000",
+  "amount": 100000,
+  "orderInfo": "Test payment with valid VNPay credentials",
+  "returnUrl": "http://localhost:5173/payment/return"
+}
+
+### Test với amount khác
+POST https://localhost:7095/api/Payment/create
+Content-Type: application/json
+
+{
+  "orderId": "456e7890-e12b-34c5-d678-901234567890",
+  "amount": 250000,
+  "orderInfo": "Test VNPay payment 250k VND",
+  "returnUrl": "http://localhost:3000/payment/success"
+}
+
+### Test minimal amount
+POST https://localhost:7095/api/Payment/create
+Content-Type: application/json
+
+{
+  "orderId": "789f0123-e45f-67g8-h901-234567890123",
+  "amount": 10000,
+  "orderInfo": "Minimal test payment",
+  "returnUrl": "http://localhost:5173/payment/return"
+}
