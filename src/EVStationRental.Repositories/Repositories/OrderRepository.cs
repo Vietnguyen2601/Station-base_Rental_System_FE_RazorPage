@@ -119,5 +119,10 @@ namespace EVStationRental.Repositories.Repositories
                 .OrderByDescending(o => o.OrderDate)
                 .ToListAsync();
         }
+
+        public async Task<List<Order>> GetAllOrdersAsync()
+        {
+            return await _context.Set<Order>().ToListAsync();
+        }
     }
 }

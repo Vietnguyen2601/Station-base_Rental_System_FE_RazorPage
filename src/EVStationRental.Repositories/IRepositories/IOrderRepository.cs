@@ -15,5 +15,6 @@ namespace EVStationRental.Repositories.IRepositories
         Task<bool> IsVehicleAvailableAsync(Guid vehicleId, DateTime startTime, DateTime endTime);
         Task<List<Order>> GetActiveOrdersAsync();
         Task<List<Order>> GetOrdersByVehicleIdAsync(Guid vehicleId);
+        Task<List<Order>> GetAllOrdersAsync();
     }
 }
