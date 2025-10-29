@@ -1,4 +1,5 @@
 using EVStationRental.Common.DTOs.OrderDTOs;
+using EVStationRental.Common.DTOs.VehicleModelDTOs;
 using EVStationRental.Repositories.Models;
 
 namespace EVStationRental.Repositories.Mapper
@@ -22,6 +23,28 @@ namespace EVStationRental.Repositories.Mapper
                 Status = order.Status,
                 VehicleModelName = order.Vehicle?.Model?.Name ?? string.Empty,
                 PricePerHour = order.Vehicle?.Model?.PricePerHour ?? 0
+            };
+        }
+
+        public static ViewOrderResponseDTO  ToViewOrderDTO(this Order order)
+        {
+            return new ViewOrderResponseDTO
+            {
+                OrderId = order.OrderId,
+                CustomerId = order.CustomerId,
+                VehicleId = order.VehicleId,
+                OrderDate = order.OrderDate,
+                StartTime = order.StartTime,
+                EndTime = order.EndTime,
+                BasePrice = order.BasePrice,
+                TotalPrice = order.TotalPrice,
+                PromotionId = order.PromotionId,
+                StaffId = order.StaffId,
+                CreatedAt = order.CreatedAt,
+                UpdatedAt = order.UpdatedAt,
+                Isactive = order.Isactive,
+                Status = order.Status
+
             };
         }
     }

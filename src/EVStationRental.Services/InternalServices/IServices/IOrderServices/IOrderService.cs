@@ -11,5 +11,7 @@ namespace EVStationRental.Services.InternalServices.IServices.IOrderServices
         Task<IServiceResult> GetOrderByIdAsync(Guid orderId);
         Task<IServiceResult> GetOrdersByCustomerIdAsync(Guid customerId);
         Task<IServiceResult> CancelOrderAsync(Guid orderId, Guid customerId);
+
+        Task<IServiceResult> GetAllOrdersAsync();
     }
 }

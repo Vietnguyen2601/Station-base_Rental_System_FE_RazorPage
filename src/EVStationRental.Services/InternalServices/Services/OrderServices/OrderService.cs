@@ -303,5 +303,38 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 };
             }
         }
+
+        public async Task<IServiceResult> GetAllOrdersAsync()
+        {
+            try
+            {
+                var orders = await _unitOfWork.OrderRepository.GetAllOrdersAsync();
+                if (orders == null || orders.Count == 0)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không có đơn đặt xe nào."
+                    };
+                }
+
+                var orderDtos = orders.Select(o => o.ToViewOrderDTO()).ToList();
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_READ_CODE,
+                    Message = "Lấy danh sách đơn đặt xe thành công.",
+                    Data = orderDtos
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi lấy danh sách đơn đặt xe: {ex.Message}"
+                };
+            }
+        }
     }
 }
