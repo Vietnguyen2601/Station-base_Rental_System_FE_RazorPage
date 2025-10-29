@@ -1,10 +1,11 @@
-using System;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using EVStationRental.Common.DTOs.OrderDTOs;
+using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Services.InternalServices.IServices.IOrderServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace EVStationRental.APIServices.Controllers
 {
@@ -23,6 +24,25 @@ namespace EVStationRental.APIServices.Controllers
         /// <summary>
         /// ??t xe m?i
         /// </summary>
+        /// 
+        [HttpGet]
+        public async Task<IActionResult> GetAllOrders()
+        {
+            var result = await _orderService.GetAllOrdersAsync();
+            if (result.Data == null)
+            {
+                return NotFound(new
+                {
+                    Message = Const.WARNING_NO_DATA_MSG
+                });
+            }
+            return Ok(new
+            {
+                Message = Const.SUCCESS_READ_MSG,
+                Data = result.Data
+            });
+        }
+
         [HttpPost("book")]
         public async Task<IActionResult> BookVehicle([FromBody] CreateOrderRequestDTO request)
         {
