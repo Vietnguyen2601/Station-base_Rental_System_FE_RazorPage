@@ -139,5 +139,22 @@ namespace EVStationRental.APIServices.Controllers
                 _ => StatusCode(500, result)
             };
         }
+
+        /// <summary>
+        /// Bắt đầu sử dụng xe (chuyển status sang ONGOING)
+        /// </summary>
+        [HttpPut("{orderId}/start")]
+        public async Task<IActionResult> StartOrder(Guid orderId)
+        {
+            var result = await _orderService.StartOrderAsync(orderId);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
+                404 => NotFound(result),
+                400 => BadRequest(result),
+                _ => StatusCode(500, result)
+            };
+        }
     }
 }
