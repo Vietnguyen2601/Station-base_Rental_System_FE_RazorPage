@@ -575,5 +575,94 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 return new ServiceResult(500, $"Error completing order: {ex.Message}");
             }
         }
+
+        /// <summary>
+        /// Tính tiền cọc (Deposit Price) = 10% của base_price
+        /// </summary>
+        public async Task<decimal> CalculateDepositPriceAsync(Guid orderId)
+        {
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
+            if (order == null)
+            {
+                throw new ArgumentException($"Order with ID {orderId} not found");
+            }
+
+            // deposit_price = 10% của base_price
+            decimal depositPrice = order.BasePrice * 0.10m;
+
+            _logger.LogInformation("Deposit price calculated for Order {OrderId}: {DepositPrice}", 
+                orderId, depositPrice);
+
+            return depositPrice;
+        }
+
+        /// <summary>
+        /// Tính tổng giá (Total Price) = base_price - promotion_price(if any)
+        /// Không tính extra_charge như yêu cầu
+        /// </summary>
+        public async Task<decimal> CalculateTotalPriceAsync(Guid orderId)
+        {
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
+            if (order == null)
+            {
+                throw new ArgumentException($"Order with ID {orderId} not found");
+            }
+
+            decimal basePrice = order.BasePrice;
+            decimal promotionPrice = 0m;
+
+            // Áp dụng promotion nếu có
+            if (order.PromotionId.HasValue)
+            {
+                var promotion = await _unitOfWork.PromotionRepository.GetByIdAsync(order.PromotionId.Value);
+                if (promotion != null && promotion.Isactive)
+                {
+                    promotionPrice = basePrice * (promotion.DiscountPercentage / 100);
+                }
+            }
+
+            // Total = base_price - promotion_price(if any)
+            decimal totalPrice = basePrice - promotionPrice;
+
+            _logger.LogInformation("Total price calculated for Order {OrderId}: {TotalPrice} (Base: {BasePrice}, Promotion: {PromotionPrice})", 
+                orderId, totalPrice, basePrice, promotionPrice);
+
+            return totalPrice;
+        }
+
+        /// <summary>
+        /// Tính giá cuối cùng (Final Price) = base_price - deposit_price - promotion_price(if any)
+        /// Không tính extra_charge như yêu cầu
+        /// </summary>
+        public async Task<decimal> CalculateFinalPriceAsync(Guid orderId)
+        {
+            var order = await _unitOfWork.OrderRepository.GetByIdAsync(orderId);
+            if (order == null)
+            {
+                throw new ArgumentException($"Order with ID {orderId} not found");
+            }
+
+            decimal basePrice = order.BasePrice;
+            decimal depositPrice = basePrice * 0.10m; // 10% deposit
+            decimal promotionPrice = 0m;
+
+            // Áp dụng promotion nếu có
+            if (order.PromotionId.HasValue)
+            {
+                var promotion = await _unitOfWork.PromotionRepository.GetByIdAsync(order.PromotionId.Value);
+                if (promotion != null && promotion.Isactive)
+                {
+                    promotionPrice = basePrice * (promotion.DiscountPercentage / 100);
+                }
+            }
+
+            // Final = base_price - deposit_price - promotion_price(if any)
+            decimal finalPrice = basePrice - depositPrice - promotionPrice;
+
+            _logger.LogInformation("Final price calculated for Order {OrderId}: {FinalPrice} (Base: {BasePrice}, Deposit: {DepositPrice}, Promotion: {PromotionPrice})", 
+                orderId, finalPrice, basePrice, depositPrice, promotionPrice);
+
+            return finalPrice;
+        }
     }
 }
