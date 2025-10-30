@@ -289,6 +289,136 @@ namespace EVStationRental.APIServices.Controllers
                 _ => StatusCode(500, result)
             };
         }
+
+        /// <summary>
+        /// Tính tiền cọc (Deposit Price) = 10% của base_price
+        /// </summary>
+        [HttpGet("calculate-deposit/{orderId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CalculateDepositPrice(Guid orderId)
+        {
+            try
+            {
+                var depositPrice = await _paymentService.CalculateDepositPriceAsync(orderId);
+                
+                return Ok(new
+                {
+                    statusCode = 200,
+                    message = "Deposit price calculated successfully",
+                    data = new
+                    {
+                        orderId = orderId,
+                        depositPrice = depositPrice,
+                        depositPercentage = 10,
+                        message = $"Deposit price is 10% of base price: {depositPrice:C}"
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new
+                {
+                    statusCode = 404,
+                    message = ex.Message,
+                    data = (object?)null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    statusCode = 500,
+                    message = $"Error calculating deposit price: {ex.Message}",
+                    data = (object?)null
+                });
+            }
+        }
+
+        /// <summary>
+        /// Tính tổng giá (Total Price) = base_price - promotion_price(if any)
+        /// </summary>
+        [HttpGet("calculate-total/{orderId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CalculateTotalPrice(Guid orderId)
+        {
+            try
+            {
+                var totalPrice = await _paymentService.CalculateTotalPriceAsync(orderId);
+                
+                return Ok(new
+                {
+                    statusCode = 200,
+                    message = "Total price calculated successfully",
+                    data = new
+                    {
+                        orderId = orderId,
+                        totalPrice = totalPrice,
+                        message = $"Total price calculated: {totalPrice:C}"
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new
+                {
+                    statusCode = 404,
+                    message = ex.Message,
+                    data = (object?)null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    statusCode = 500,
+                    message = $"Error calculating total price: {ex.Message}",
+                    data = (object?)null
+                });
+            }
+        }
+
+        /// <summary>
+        /// Tính giá cuối cùng (Final Price) = base_price - deposit_price - promotion_price(if any)
+        /// </summary>
+        [HttpGet("calculate-final/{orderId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CalculateFinalPrice(Guid orderId)
+        {
+            try
+            {
+                var finalPrice = await _paymentService.CalculateFinalPriceAsync(orderId);
+                
+                return Ok(new
+                {
+                    statusCode = 200,
+                    message = "Final price calculated successfully",
+                    data = new
+                    {
+                        orderId = orderId,
+                        finalPrice = finalPrice,
+                        message = $"Final price calculated: {finalPrice:C}"
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new
+                {
+                    statusCode = 404,
+                    message = ex.Message,
+                    data = (object?)null
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    statusCode = 500,
+                    message = $"Error calculating final price: {ex.Message}",
+                    data = (object?)null
+                });
+            }
+        }
     }
 
     /// <summary>

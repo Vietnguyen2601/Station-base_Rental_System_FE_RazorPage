@@ -24,5 +24,10 @@ namespace EVStationRental.Services.InternalServices.IServices.IPaymentServices
         Task<IServiceResult> HandleVNPayReturnWithProcedureAsync(VNPayReturnDTO returnData);
         Task<IServiceResult> CancelOrderWithRefundAsync(Guid orderId, string reason = "Customer cancellation");
         Task<IServiceResult> CompleteOrderWithFinalPaymentAsync(Guid orderId, string finalPaymentMethod = "CASH");
+
+        // Price Calculation Methods - Return decimal values
+        Task<decimal> CalculateDepositPriceAsync(Guid orderId);
+        Task<decimal> CalculateTotalPriceAsync(Guid orderId);
+        Task<decimal> CalculateFinalPriceAsync(Guid orderId);
     }
 }
