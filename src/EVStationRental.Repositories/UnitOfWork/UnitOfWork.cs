@@ -20,6 +20,7 @@ namespace EVStationRental.Repositories.UnitOfWork
         private IReportRepository reportRepository;
         private IOrderRepository orderRepository;
         private IPaymentRepository paymentRepository;
+        private IFeedbackRepository feedbackRepository;
 
         public UnitOfWork()
         {
@@ -103,6 +104,14 @@ namespace EVStationRental.Repositories.UnitOfWork
             get
             {
                 return paymentRepository ??= new Repositories.PaymentRepository(_context);
+            }
+        }
+
+        public IFeedbackRepository FeedbackRepository
+        {
+            get
+            {
+                return feedbackRepository ??= new Repositories.FeedbackRepository(_context);
             }
         }
     }
