@@ -16,5 +16,6 @@ namespace EVStationRental.Repositories.UnitOfWork
         IReportRepository ReportRepository { get; }
         IOrderRepository OrderRepository { get; }
         IPaymentRepository PaymentRepository { get; }
+        IFeedbackRepository FeedbackRepository { get; }
     }
 }
