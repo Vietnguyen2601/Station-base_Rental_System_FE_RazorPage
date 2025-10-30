@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using EVStationRental.Common.DTOs.OrderDTOs;
 using EVStationRental.Common.Enums.EnumModel;
@@ -62,11 +63,11 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
 
                 if (!isAvailable)
                 {
-                    return new ServiceResult
-                    {
-                        StatusCode = Const.ERROR_VALIDATION_CODE,
-                        Message = "Xe không khả dụng trong khoảng thời gian đã chọn"
-                    };
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_VALIDATION_CODE,
+                    Message = "Xe không khả dụng trong khoảng thời gian đã chọn"
+                };
                 }
 
                 // Get vehicle model to calculate price
@@ -333,6 +334,82 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 {
                     StatusCode = Const.ERROR_EXCEPTION,
                     Message = $"Lỗi khi lấy danh sách đơn đặt xe: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Bắt đầu sử dụng xe (chuyển status sang ONGOING khi khách nhận xe)
+        /// </summary>
+        public async Task<IServiceResult> StartOrderAsync(Guid orderId)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetOrderByIdAsync(orderId);
+                
+                if (order == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy đơn đặt xe"
+                    };
+                }
+
+                // Only allow starting orders that are CONFIRMED
+                if (order.Status != OrderStatus.CONFIRMED)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = $"Không thể bắt đầu đơn đặt xe ở trạng thái {order.Status}. Đơn hàng phải ở trạng thái CONFIRMED."
+                    };
+                }
+
+                // Check if current time is appropriate to start
+                if (DateTime.Now < order.StartTime.AddHours(-1)) // Allow 1 hour early
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Chưa đến thời gian bắt đầu sử dụng xe"
+                    };
+                }
+
+                // Update order status to ONGOING
+                order.Status = OrderStatus.ONGOING;
+                order.UpdatedAt = DateTime.Now;
+                await _unitOfWork.OrderRepository.UpdateOrderAsync(order);
+
+                // Vehicle status should already be RENTED, but we can verify
+                var vehicle = await _unitOfWork.VehicleRepository.GetVehicleByIdAsync(order.VehicleId);
+                if (vehicle != null && vehicle.Status != VehicleStatus.RENTED)
+                {
+                    vehicle.Status = VehicleStatus.RENTED;
+                    vehicle.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.VehicleRepository.UpdateVehicleAsync(vehicle);
+                }
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_UPDATE_CODE,
+                    Message = "Bắt đầu sử dụng xe thành công",
+                    Data = new
+                    {
+                        OrderId = order.OrderId,
+                        Status = order.Status.ToString(),
+                        StartTime = order.StartTime,
+                        EndTime = order.EndTime,
+                        VehicleId = order.VehicleId
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi bắt đầu đơn đặt xe: {ex.Message}"
                 };
             }
         }
