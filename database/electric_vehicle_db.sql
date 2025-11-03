@@ -1,77 +1,33 @@
--- =========================================
--- TẠO DATABASE NẾU CHƯA TỒN TẠI
--- =========================================
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_database WHERE datname = 'electric_vehicle_db') THEN
-        EXECUTE 'CREATE DATABASE electric_vehicle_db';
-        RAISE NOTICE 'Database electric_vehicle_db đã được tạo.';
-    ELSE
-        RAISE NOTICE 'Database electric_vehicle_db đã tồn tại.';
-    END IF;
-END
-$$;
-
--- NOTE: If you run this inside psql connected to a specific DB, you can skip the DB creation block above.
-
--- =========================================
--- EXTENSIONS
--- =========================================
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- =========================================
--- BASIC TRIGGER FUNCTIONS
--- =========================================
-CREATE OR REPLACE FUNCTION set_created_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.created_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- =========================================
--- ENUM TYPES (vehicle status, order status, payment type)
--- =========================================
+-- ENUM TYPES
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'vehicle_status') THEN
-        CREATE TYPE vehicle_status AS ENUM ('AVAILABLE', 'RENTED', 'MAINTENANCE', 'CHARGING');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'transaction_type_enum') THEN
+        CREATE TYPE transaction_type_enum AS ENUM ('DEPOSIT','PAYMENT','REFUND');
     END IF;
-END
-$$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'order_status') THEN
-        CREATE TYPE order_status AS ENUM ('PENDING', 'CONFIRMED', 'ONGOING', 'COMPLETED', 'CANCELED');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'vehicle_status') THEN
+        CREATE TYPE vehicle_status AS ENUM ('AVAILABLE','RENTED','MAINTENANCE','CHARGING');
     END IF;
-END
-$$;
-
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT FROM pg_type WHERE typname = 'payment_type_enum') THEN
-        CREATE TYPE payment_type_enum AS ENUM ('DEPOSIT', 'FINAL', 'REFUND');
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
+        CREATE TYPE order_status AS ENUM ('PENDING','CONFIRMED','ONGOING','COMPLETED','CANCELED');
     END IF;
-END
-$$;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_type_enum') THEN
+        CREATE TYPE payment_type_enum AS ENUM ('DEPOSIT','FINAL','REFUND');
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'damage_level_enum') THEN
+        CREATE TYPE damage_level_enum AS ENUM ('MINOR','MODERATE','SEVERE');
+    END IF;
+END$$;
 
--- =========================================
--- DROP TABLES (safe to run)
--- =========================================
+-- DROP TABLES (order-safe)
+DROP TABLE IF EXISTS "WalletTransactions" CASCADE;
+DROP TABLE IF EXISTS "Wallets" CASCADE;
 DROP TABLE IF EXISTS "Staff_Revenues" CASCADE;
 DROP TABLE IF EXISTS "Reports" CASCADE;
 DROP TABLE IF EXISTS "Feedbacks" CASCADE;
+DROP TABLE IF EXISTS "DamageReports" CASCADE;
+DROP TABLE IF EXISTS "Contracts" CASCADE;
 DROP TABLE IF EXISTS "Payments" CASCADE;
 DROP TABLE IF EXISTS "Orders" CASCADE;
 DROP TABLE IF EXISTS "Promotions" CASCADE;
@@ -79,15 +35,14 @@ DROP TABLE IF EXISTS "Vehicles" CASCADE;
 DROP TABLE IF EXISTS "VehicleModels" CASCADE;
 DROP TABLE IF EXISTS "VehicleTypes" CASCADE;
 DROP TABLE IF EXISTS "Stations" CASCADE;
-DROP TABLE IF EXISTS "Roles" CASCADE;
 DROP TABLE IF EXISTS "Accounts" CASCADE;
+DROP TABLE IF EXISTS "Roles" CASCADE;
 
--- =========================================
--- CREATE TABLES
--- =========================================
+-- TABLES (create in dependency order)
+
 CREATE TABLE "Roles" (
   role_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  role_name VARCHAR(100) NOT NULL,
+  role_name VARCHAR NOT NULL,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP
@@ -99,11 +54,19 @@ CREATE TABLE "Accounts" (
   password VARCHAR NOT NULL,
   email VARCHAR NOT NULL,
   contact_number VARCHAR,
-  role_id UUID NOT NULL,
+  role_id UUID NOT NULL REFERENCES "Roles"(role_id),
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP
+);
+
+CREATE TABLE "Wallets" (
+  wallet_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES "Accounts"(account_id),
+  balance DECIMAL NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP,
-  FOREIGN KEY (role_id) REFERENCES "Roles"(role_id)
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE "VehicleTypes" (
@@ -117,15 +80,14 @@ CREATE TABLE "VehicleTypes" (
 
 CREATE TABLE "VehicleModels" (
   vehicle_model_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  type_id UUID NOT NULL,
+  type_id UUID NOT NULL REFERENCES "VehicleTypes"(vehicle_type_id),
   name VARCHAR NOT NULL,
   manufacturer VARCHAR NOT NULL,
   price_per_hour DECIMAL NOT NULL,
   specs VARCHAR,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
-  updated_at TIMESTAMP,
-  FOREIGN KEY (type_id) REFERENCES "VehicleTypes"(vehicle_type_id)
+  updated_at TIMESTAMP
 );
 
 CREATE TABLE "Stations" (
@@ -144,8 +106,8 @@ CREATE TABLE "Stations" (
 CREATE TABLE "Vehicles" (
   vehicle_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   serial_number VARCHAR NOT NULL UNIQUE,
-  model_id UUID NOT NULL,
-  station_id UUID,
+  model_id UUID NOT NULL REFERENCES "VehicleModels"(vehicle_model_id),
+  station_id UUID REFERENCES "Stations"(station_id),
   status vehicle_status NOT NULL DEFAULT 'AVAILABLE',
   battery_level INT,
   battery_capacity INT,
@@ -155,9 +117,7 @@ CREATE TABLE "Vehicles" (
   img VARCHAR,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   isActive BOOLEAN NOT NULL DEFAULT TRUE,
-  updated_at TIMESTAMP,
-  FOREIGN KEY (model_id) REFERENCES "VehicleModels"(vehicle_model_id),
-  FOREIGN KEY (station_id) REFERENCES "Stations"(station_id)
+  updated_at TIMESTAMP
 );
 
 CREATE TABLE "Promotions" (
@@ -171,56 +131,77 @@ CREATE TABLE "Promotions" (
   isActive BOOLEAN NOT NULL DEFAULT TRUE
 );
 
+-- Orders must exist before WalletTransactions (fixed)
 CREATE TABLE "Orders" (
   order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  customer_id UUID NOT NULL,
-  vehicle_id UUID NOT NULL,
+  customer_id UUID NOT NULL REFERENCES "Accounts"(account_id),
+  vehicle_id UUID NOT NULL REFERENCES "Vehicles"(vehicle_id),
+  order_code VARCHAR NOT NULL UNIQUE,
   order_date TIMESTAMP NOT NULL,
   start_time TIMESTAMP NOT NULL,
   end_time TIMESTAMP,
+  return_time TIMESTAMP,
   base_price DECIMAL NOT NULL,
   total_price DECIMAL NOT NULL,
   status order_status NOT NULL DEFAULT 'PENDING',
-  promotion_id UUID,
-  staff_id UUID,
+  promotion_id UUID REFERENCES "Promotions"(promotion_id),
+  staff_id UUID REFERENCES "Accounts"(account_id),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP,
-  isActive BOOLEAN NOT NULL DEFAULT TRUE,
-  FOREIGN KEY (customer_id) REFERENCES "Accounts"(account_id),
-  FOREIGN KEY (vehicle_id) REFERENCES "Vehicles"(vehicle_id),
-  FOREIGN KEY (promotion_id) REFERENCES "Promotions"(promotion_id),
-  FOREIGN KEY (staff_id) REFERENCES "Accounts"(account_id)
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE "Payments" (
   payment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id UUID NOT NULL,
+  order_id UUID NOT NULL REFERENCES "Orders"(order_id),
+  gateway_tx_id VARCHAR,
   amount DECIMAL NOT NULL,
   payment_date TIMESTAMP NOT NULL,
-  payment_method VARCHAR(100) NOT NULL,
+  payment_method VARCHAR NOT NULL,
   payment_type payment_type_enum NOT NULL,
-  status VARCHAR(50) NOT NULL, -- PENDING / COMPLETED / FAILED / REFUNDED (kept as text for simplicity)
-  gateway_tx_id VARCHAR(255),
-  gateway_response JSONB,
-  idempotency_key VARCHAR(255),
+  status VARCHAR NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP,
-  isActive BOOLEAN NOT NULL DEFAULT TRUE,
-  FOREIGN KEY (order_id) REFERENCES "Orders"(order_id)
+  idempotency_key VARCHAR(255),
+  gateway_response JSONB,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE "DamageReports" (
+  damage_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES "Orders"(order_id),
+  vehicle_id UUID NOT NULL REFERENCES "Vehicles"(vehicle_id),
+  damage_level damage_level_enum NOT NULL,
+  description TEXT NOT NULL,
+  estimated_cost DECIMAL NOT NULL,
+  img VARCHAR,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE "Contracts" (
+  contract_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES "Orders"(order_id),
+  customer_id UUID NOT NULL REFERENCES "Accounts"(account_id),
+  vehicle_id UUID NOT NULL REFERENCES "Vehicles"(vehicle_id),
+  contract_date TIMESTAMP NOT NULL,
+  file_url VARCHAR NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE "Feedbacks" (
   feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  customer_id UUID NOT NULL,
-  order_id UUID NOT NULL,
+  customer_id UUID NOT NULL REFERENCES "Accounts"(account_id),
+  order_id UUID NOT NULL REFERENCES "Orders"(order_id),
   rating INT NOT NULL,
   comment TEXT,
   feedback_date TIMESTAMP NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP,
-  isActive BOOLEAN NOT NULL DEFAULT TRUE,
-  FOREIGN KEY (customer_id) REFERENCES "Accounts"(account_id),
-  FOREIGN KEY (order_id) REFERENCES "Orders"(order_id)
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE "Reports" (
@@ -228,32 +209,58 @@ CREATE TABLE "Reports" (
   report_type VARCHAR NOT NULL,
   generated_date TIMESTAMP NOT NULL,
   text VARCHAR NOT NULL,
-  account_id UUID NOT NULL,
-  vehicle_id UUID NOT NULL,
+  account_id UUID NOT NULL REFERENCES "Accounts"(account_id),
+  vehicle_id UUID NOT NULL REFERENCES "Vehicles"(vehicle_id),
+  img VARCHAR,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP,
-  isActive BOOLEAN NOT NULL DEFAULT TRUE,
-  FOREIGN KEY (account_id) REFERENCES "Accounts"(account_id),
-  FOREIGN KEY (vehicle_id) REFERENCES "Vehicles"(vehicle_id)
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE "Staff_Revenues" (
   staff_revenue_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  staff_id UUID NOT NULL,
+  staff_id UUID NOT NULL REFERENCES "Accounts"(account_id),
   revenue_date TIMESTAMP NOT NULL,
   total_revenue DECIMAL NOT NULL,
   commission DECIMAL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP,
-  isActive BOOLEAN NOT NULL DEFAULT TRUE,
-  FOREIGN KEY (staff_id) REFERENCES "Accounts"(account_id)
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
 );
 
--- =========================================
--- TRIGGERS created_at
--- =========================================
+-- Now create WalletTransactions AFTER Orders exists
+CREATE TABLE "WalletTransactions" (
+  transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  wallet_id UUID NOT NULL REFERENCES "Wallets"(wallet_id),
+  order_id UUID REFERENCES "Orders"(order_id),
+  amount DECIMAL NOT NULL,
+  transaction_type transaction_type_enum NOT NULL,
+  description VARCHAR,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  isActive BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+-- TRIGGERS: created_at / updated_at
+CREATE OR REPLACE FUNCTION set_created_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.created_at = COALESCE(NEW.created_at, CURRENT_TIMESTAMP);
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach created_at triggers
 CREATE TRIGGER set_roles_created_at BEFORE INSERT ON "Roles" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_accounts_created_at BEFORE INSERT ON "Accounts" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
+CREATE TRIGGER set_wallets_created_at BEFORE INSERT ON "Wallets" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_vehicle_types_created_at BEFORE INSERT ON "VehicleTypes" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_vehicle_models_created_at BEFORE INSERT ON "VehicleModels" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_stations_created_at BEFORE INSERT ON "Stations" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
@@ -261,15 +268,17 @@ CREATE TRIGGER set_vehicles_created_at BEFORE INSERT ON "Vehicles" FOR EACH ROW 
 CREATE TRIGGER set_promotions_created_at BEFORE INSERT ON "Promotions" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_orders_created_at BEFORE INSERT ON "Orders" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_payments_created_at BEFORE INSERT ON "Payments" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
+CREATE TRIGGER set_wallettx_created_at BEFORE INSERT ON "WalletTransactions" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_feedbacks_created_at BEFORE INSERT ON "Feedbacks" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_reports_created_at BEFORE INSERT ON "Reports" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 CREATE TRIGGER set_staff_revenues_created_at BEFORE INSERT ON "Staff_Revenues" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
+CREATE TRIGGER set_contracts_created_at BEFORE INSERT ON "Contracts" FOR EACH ROW EXECUTE FUNCTION set_created_at_column();
 
--- =========================================
--- TRIGGERS updated_at
--- =========================================
+-- Attach updated_at triggers
 CREATE TRIGGER update_roles_updated_at BEFORE UPDATE ON "Roles" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_accounts_updated_at BEFORE UPDATE ON "Accounts" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_wallets_updated_at BEFORE UPDATE ON "Wallets" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_wallettx_updated_at BEFORE UPDATE ON "WalletTransactions" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_vehicle_types_updated_at BEFORE UPDATE ON "VehicleTypes" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_vehicle_models_updated_at BEFORE UPDATE ON "VehicleModels" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_vehicles_updated_at BEFORE UPDATE ON "Vehicles" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -280,24 +289,14 @@ CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON "Payments" FOR EACH R
 CREATE TRIGGER update_feedbacks_updated_at BEFORE UPDATE ON "Feedbacks" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_reports_updated_at BEFORE UPDATE ON "Reports" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_staff_revenues_updated_at BEFORE UPDATE ON "Staff_Revenues" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_contracts_updated_at BEFORE UPDATE ON "Contracts" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- =========================================
--- INDEXES (useful for gateway ids and idempotency)
--- =========================================
+-- INDEXES: only for Payments
 CREATE UNIQUE INDEX IF NOT EXISTS ux_payments_gateway_tx_id ON "Payments"(gateway_tx_id) WHERE gateway_tx_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_payments_idempotency ON "Payments"(idempotency_key) WHERE idempotency_key IS NOT NULL;
--- Optional: ensure at most one DEPOSIT PENDING per order (uncomment if desired)
--- CREATE UNIQUE INDEX IF NOT EXISTS ux_order_deposit_pending ON "Payments"(order_id) WHERE payment_type = 'DEPOSIT' AND status = 'PENDING' AND isActive = TRUE;
+CREATE INDEX IF NOT EXISTS ix_payments_orderid_type_status ON "Payments"(order_id, payment_type, status);
 
--- =========================================
--- FUNCTIONS: payment/order flows (functions run within caller transaction)
--- - create_order_with_deposit  -> creates Order + DEPOSIT payment (PENDING) and marks vehicle RENTED
--- - cancel_order_refund        -> creates REFUND payment (PENDING) for completed deposits and marks order canceled
--- - complete_order_finalize_payment -> creates FINAL or REFUND payment (PENDING) and marks order completed
--- - mark_payment_completed     -> app calls after gateway success to mark payment COMPLETED and store gateway tx info
--- =========================================
-
--- 1) create_order_with_deposit
+-- CORE FUNCTIONS (existing flows)
 CREATE OR REPLACE FUNCTION create_order_with_deposit(
     p_customer_id UUID,
     p_vehicle_id UUID,
@@ -315,44 +314,27 @@ DECLARE
     v_order_id UUID;
     v_vehicle_status vehicle_status;
 BEGIN
-    -- Lock vehicle row to avoid race condition
-    SELECT status INTO v_vehicle_status
-    FROM "Vehicles"
-    WHERE vehicle_id = p_vehicle_id
-    FOR UPDATE;
-
+    SELECT status INTO v_vehicle_status FROM "Vehicles" WHERE vehicle_id = p_vehicle_id FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Vehicle % does not exist', p_vehicle_id;
     END IF;
-
     IF v_vehicle_status <> 'AVAILABLE' THEN
         RAISE EXCEPTION 'Vehicle % not available (status=%)', p_vehicle_id, v_vehicle_status;
     END IF;
 
-    -- Insert order (CONFIRMED)
-    INSERT INTO "Orders" (
-        order_id, customer_id, vehicle_id, order_date, start_time, end_time,
-        base_price, total_price, status, promotion_id, staff_id, created_at, isActive
-    ) VALUES (
-        gen_random_uuid(), p_customer_id, p_vehicle_id, p_order_date, p_start_time, p_end_time,
-        p_base_price, p_total_price, 'CONFIRMED', p_promotion_id, p_staff_id, CURRENT_TIMESTAMP, TRUE
-    ) RETURNING order_id INTO v_order_id;
+    INSERT INTO "Orders"(order_id, customer_id, vehicle_id, order_date, start_time, end_time, base_price, total_price, status, promotion_id, staff_id, created_at, isActive)
+    VALUES (gen_random_uuid(), p_customer_id, p_vehicle_id, p_order_date, p_start_time, p_end_time, p_base_price, p_total_price, 'CONFIRMED', p_promotion_id, p_staff_id, CURRENT_TIMESTAMP, TRUE)
+    RETURNING order_id INTO v_order_id;
 
-    -- Insert deposit payment as PENDING: app should call gateway and then set this payment.status = 'COMPLETED' and set gateway_tx_id
-    INSERT INTO "Payments" (
-        payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive
-    ) VALUES (
-        gen_random_uuid(), v_order_id, p_deposit_amount, CURRENT_TIMESTAMP, p_payment_method, 'DEPOSIT', 'PENDING', CURRENT_TIMESTAMP, TRUE
-    );
+    INSERT INTO "Payments"(payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+    VALUES (gen_random_uuid(), v_order_id, p_deposit_amount, CURRENT_TIMESTAMP, p_payment_method, 'DEPOSIT', 'PENDING', CURRENT_TIMESTAMP, TRUE);
 
-    -- Mark vehicle as RENTED (prevent double-booking)
     UPDATE "Vehicles" SET status = 'RENTED', updated_at = CURRENT_TIMESTAMP WHERE vehicle_id = p_vehicle_id;
 
     RETURN v_order_id;
 END;
 $$ LANGUAGE plpgsql;
 
--- 2) cancel_order_refund
 CREATE OR REPLACE FUNCTION cancel_order_refund(
     p_order_id UUID,
     p_refund_method VARCHAR DEFAULT 'ORIGINAL'
@@ -362,47 +344,26 @@ DECLARE
     v_vehicle_id UUID;
     v_deposit_sum NUMERIC := 0;
 BEGIN
-    -- Lock order row
-    SELECT status, vehicle_id INTO v_status, v_vehicle_id
-    FROM "Orders"
-    WHERE order_id = p_order_id
-    FOR UPDATE;
-
+    SELECT status, vehicle_id INTO v_status, v_vehicle_id FROM "Orders" WHERE order_id = p_order_id FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Order % does not exist', p_order_id;
     END IF;
-
     IF v_status NOT IN ('PENDING','CONFIRMED') THEN
         RAISE EXCEPTION 'Cannot cancel order % with status %', p_order_id, v_status;
     END IF;
-
-    -- Sum only deposits that were COMPLETED (actually charged)
-    SELECT COALESCE(SUM(amount),0) INTO v_deposit_sum
-    FROM "Payments"
-    WHERE order_id = p_order_id AND payment_type = 'DEPOSIT' AND status = 'COMPLETED' AND isActive = TRUE;
-
+    SELECT COALESCE(SUM(amount),0) INTO v_deposit_sum FROM "Payments" WHERE order_id = p_order_id AND payment_type = 'DEPOSIT' AND status = 'COMPLETED' AND isActive = TRUE;
     IF v_deposit_sum > 0 THEN
-        -- Create REFUND payment record with PENDING status; app must call gateway and then update to COMPLETED
-        INSERT INTO "Payments" (
-            payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive
-        ) VALUES (
-            gen_random_uuid(), p_order_id, v_deposit_sum, CURRENT_TIMESTAMP, p_refund_method, 'REFUND', 'PENDING', CURRENT_TIMESTAMP, TRUE
-        );
+        INSERT INTO "Payments"(payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+        VALUES (gen_random_uuid(), p_order_id, v_deposit_sum, CURRENT_TIMESTAMP, p_refund_method, 'REFUND', 'PENDING', CURRENT_TIMESTAMP, TRUE);
     END IF;
-
-    -- Update order status to CANCELED
     UPDATE "Orders" SET status = 'CANCELED', updated_at = CURRENT_TIMESTAMP WHERE order_id = p_order_id;
-
-    -- If vehicle exists, set to AVAILABLE (only if currently RENTED)
     IF v_vehicle_id IS NOT NULL THEN
         UPDATE "Vehicles" SET status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP WHERE vehicle_id = v_vehicle_id AND status = 'RENTED';
     END IF;
-
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql;
 
--- 3) complete_order_finalize_payment
 CREATE OR REPLACE FUNCTION complete_order_finalize_payment(
     p_order_id UUID,
     p_final_payment_method VARCHAR DEFAULT 'CASH'
@@ -413,71 +374,42 @@ DECLARE
     v_due NUMERIC;
     v_vehicle_id UUID;
 BEGIN
-    -- Lock order row
-    SELECT total_price, vehicle_id INTO v_total_price, v_vehicle_id
-    FROM "Orders"
-    WHERE order_id = p_order_id
-    FOR UPDATE;
-
+    SELECT total_price, vehicle_id INTO v_total_price, v_vehicle_id FROM "Orders" WHERE order_id = p_order_id FOR UPDATE;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Order % does not exist', p_order_id;
     END IF;
-
-    -- Sum only deposits that were COMPLETED
-    SELECT COALESCE(SUM(amount),0) INTO v_deposit_sum
-    FROM "Payments"
-    WHERE order_id = p_order_id AND payment_type = 'DEPOSIT' AND status = 'COMPLETED' AND isActive = TRUE;
-
+    SELECT COALESCE(SUM(amount),0) INTO v_deposit_sum FROM "Payments" WHERE order_id = p_order_id AND payment_type = 'DEPOSIT' AND status = 'COMPLETED' AND isActive = TRUE;
     v_due := v_total_price - v_deposit_sum;
-
     IF v_due > 0 THEN
-        -- Create FINAL payment PENDING (app will charge)
-        INSERT INTO "Payments" (
-            payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive
-        ) VALUES (
-            gen_random_uuid(), p_order_id, v_due, CURRENT_TIMESTAMP, p_final_payment_method, 'FINAL', 'PENDING', CURRENT_TIMESTAMP, TRUE
-        );
+        INSERT INTO "Payments"(payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+        VALUES (gen_random_uuid(), p_order_id, v_due, CURRENT_TIMESTAMP, p_final_payment_method, 'FINAL', 'PENDING', CURRENT_TIMESTAMP, TRUE);
     ELSIF v_due < 0 THEN
-        -- Create REFUND payment PENDING (app will refund)
-        INSERT INTO "Payments" (
-            payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive
-        ) VALUES (
-            gen_random_uuid(), p_order_id, ABS(v_due), CURRENT_TIMESTAMP, p_final_payment_method, 'REFUND', 'PENDING', CURRENT_TIMESTAMP, TRUE
-        );
+        INSERT INTO "Payments"(payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+        VALUES (gen_random_uuid(), p_order_id, ABS(v_due), CURRENT_TIMESTAMP, p_final_payment_method, 'REFUND', 'PENDING', CURRENT_TIMESTAMP, TRUE);
     END IF;
-
-    -- Mark order completed
     UPDATE "Orders" SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE order_id = p_order_id;
-
-    -- Set vehicle available if currently RENTED
     IF v_vehicle_id IS NOT NULL THEN
         UPDATE "Vehicles" SET status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP WHERE vehicle_id = v_vehicle_id AND status = 'RENTED';
     END IF;
-
     RETURN v_due;
 END;
 $$ LANGUAGE plpgsql;
 
--- 4) mark_payment_completed
--- App should call this after gateway confirms charge/refund success.
 CREATE OR REPLACE FUNCTION mark_payment_completed(
     p_payment_id UUID,
     p_gateway_tx_id VARCHAR,
     p_gateway_response JSONB DEFAULT NULL,
-    p_status VARCHAR DEFAULT 'COMPLETED',  -- expected: 'COMPLETED' or 'FAILED'
+    p_status VARCHAR DEFAULT 'COMPLETED',
     p_idempotency_key VARCHAR DEFAULT NULL
 ) RETURNS BOOLEAN AS $$
 DECLARE
     v_rows INT;
 BEGIN
-    -- Optionally enforce idempotency: if idempotency_key provided and already used, prevent duplicate
     IF p_idempotency_key IS NOT NULL THEN
-        -- If another payment already used this idempotency_key, raise
         IF EXISTS (SELECT 1 FROM "Payments" WHERE idempotency_key = p_idempotency_key AND payment_id <> p_payment_id) THEN
             RAISE EXCEPTION 'Idempotency key % already used by another payment', p_idempotency_key;
         END IF;
     END IF;
-
     UPDATE "Payments"
     SET status = p_status,
         gateway_tx_id = p_gateway_tx_id,
@@ -485,78 +417,180 @@ BEGIN
         idempotency_key = COALESCE(p_idempotency_key, idempotency_key),
         updated_at = CURRENT_TIMESTAMP
     WHERE payment_id = p_payment_id AND isActive = TRUE;
-
     GET DIAGNOSTICS v_rows = ROW_COUNT;
-
     IF v_rows = 0 THEN
         RAISE EXCEPTION 'No payment updated for id %', p_payment_id;
     END IF;
-
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql;
 
--- =========================================
--- SAMPLE USAGE (ví dụ)
--- Lưu ý: thay UUID bằng giá trị thực khi test
--- =========================================
--- 1) Tạo order với deposit (trong transaction của app nếu muốn)
--- BEGIN;
--- SELECT create_order_with_deposit(
---   'customer-uuid'::uuid,
---   'vehicle-uuid'::uuid,
---   now(),
---   now() + interval '1 hour',
---   now() + interval '5 hour',
---   50,        -- base_price
---   200,       -- total_price
---   50,        -- deposit_amount
---   'MOMO',    -- payment_method
---   NULL,      -- promotion_id
---   NULL       -- staff_id
--- );
--- COMMIT;
---
--- -> App lấy deposit payment_id:
--- SELECT payment_id FROM "Payments" WHERE order_id = '<order_id>' AND payment_type = 'DEPOSIT' ORDER BY created_at DESC LIMIT 1;
--- -> App calls Momo sandbox to charge deposit; when Momo returns success (transId...), app updates:
--- SELECT mark_payment_completed('<payment_id>'::uuid, 'momo_tx_123', '{"momo": "response"}'::jsonb, 'COMPLETED', 'idemp-key-1');
+-- =========================
+-- NEW: Transactional helper functions for wallet flows
+-- =========================
 
--- 2) Hủy order và hoàn cọc (nếu deposit already COMPLETED)
--- BEGIN;
--- SELECT cancel_order_refund('<order_id>'::uuid, 'MOMO');
--- COMMIT;
--- -> App finds refund payment (status = 'PENDING'), calls Momo refund API, then:
--- SELECT mark_payment_completed('<refund_payment_id>'::uuid, 'momo_refund_456', '{"momo": "refund_response"}'::jsonb, 'COMPLETED', 'idemp-refund-1');
+-- 1) create_order_with_deposit_using_wallet
+-- Creates order + contract, optionally debits wallet atomically and creates Payments/WalletTransactions.
+CREATE OR REPLACE FUNCTION create_order_with_deposit_using_wallet(
+  p_customer_id UUID,
+  p_vehicle_id UUID,
+  p_order_date TIMESTAMP,
+  p_start_time TIMESTAMP,
+  p_end_time TIMESTAMP,
+  p_base_price NUMERIC,
+  p_total_price NUMERIC,
+  p_deposit_amount NUMERIC,
+  p_payment_method VARCHAR,    -- 'WALLET' or external gateway name
+  p_promotion_id UUID DEFAULT NULL,
+  p_staff_id UUID DEFAULT NULL
+) RETURNS UUID AS $$
+DECLARE
+  v_order_id UUID;
+  v_vehicle_status vehicle_status;
+  v_wallet_id UUID;
+  v_balance NUMERIC;
+  v_order_code TEXT;
+BEGIN
+  -- Lock vehicle
+  SELECT status INTO v_vehicle_status FROM "Vehicles" WHERE vehicle_id = p_vehicle_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Vehicle % does not exist', p_vehicle_id;
+  END IF;
+  IF v_vehicle_status <> 'AVAILABLE' THEN
+    RAISE EXCEPTION 'Vehicle % not available (status=%)', p_vehicle_id, v_vehicle_status;
+  END IF;
 
--- 3) Hoàn tất trả xe và finalize payment
--- BEGIN;
--- SELECT complete_order_finalize_payment('<order_id>'::uuid, 'MOMO');
--- COMMIT;
--- -> If a FINAL payment was created (PENDING), app charges via gateway and then:
--- SELECT mark_payment_completed('<final_payment_id>'::uuid, 'momo_final_789', '{"momo": "final_response"}'::jsonb, 'COMPLETED', 'idemp-final-1');
+  -- Generate unique 6-char order_code
+  LOOP
+    v_order_code := upper(substr(md5(random()::text || clock_timestamp()::text),1,6));
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM "Orders" WHERE order_code = v_order_code);
+  END LOOP;
 
--- =========================================
--- CHECKS (gợi ý)
--- 1) Sau create_order_with_deposit: Orders.status = 'CONFIRMED', Vehicles.status = 'RENTED', Payments has DEPOSIT PENDING
--- 2) After mark_payment_completed on deposit: Payments.status = 'COMPLETED' and gateway_tx_id stored
--- 3) After cancel_order_refund: Orders.status = 'CANCELED', Payments contains REFUND (PENDING)
--- 4) After complete_order_finalize_payment: Orders.status = 'COMPLETED', Payments contains FINAL/REFUND (PENDING)
--- =========================================
+  -- Insert order
+  INSERT INTO "Orders"(order_id, customer_id, vehicle_id, order_code, order_date, start_time, end_time, base_price, total_price, status, promotion_id, staff_id, created_at, isActive)
+  VALUES (gen_random_uuid(), p_customer_id, p_vehicle_id, v_order_code, p_order_date, p_start_time, p_end_time, p_base_price, p_total_price, 'CONFIRMED', p_promotion_id, p_staff_id, now(), TRUE)
+  RETURNING order_id INTO v_order_id;
 
+  -- Create contract record (file_url left blank for staff to confirm later)
+  INSERT INTO "Contracts"(contract_id, order_id, customer_id, vehicle_id, contract_date, file_url, created_at, isActive)
+  VALUES (gen_random_uuid(), v_order_id, p_customer_id, p_vehicle_id, now(), '', now(), TRUE);
+
+  -- Handle deposit via wallet
+  IF upper(coalesce(p_payment_method,'') ) = 'WALLET' AND p_deposit_amount > 0 THEN
+    SELECT wallet_id, balance INTO v_wallet_id, v_balance FROM "Wallets" WHERE account_id = p_customer_id FOR UPDATE;
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'Wallet for account % not found', p_customer_id;
+    END IF;
+    IF v_balance < p_deposit_amount THEN
+      RAISE EXCEPTION 'Insufficient wallet balance for account %', p_customer_id;
+    END IF;
+
+    -- Debit wallet
+    UPDATE "Wallets" SET balance = balance - p_deposit_amount, updated_at = now() WHERE wallet_id = v_wallet_id;
+
+    -- Log wallet transaction
+    INSERT INTO "WalletTransactions"(transaction_id, wallet_id, order_id, amount, transaction_type, description, created_at, isActive)
+    VALUES (gen_random_uuid(), v_wallet_id, v_order_id, p_deposit_amount, 'DEPOSIT', 'Deposit for order ' || v_order_id, now(), TRUE);
+
+    -- Create Payments record as COMPLETED for wallet
+    INSERT INTO "Payments"(payment_id, order_id, gateway_tx_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+    VALUES (gen_random_uuid(), v_order_id, 'WALLET-' || gen_random_uuid()::text, p_deposit_amount, now(), 'WALLET', 'DEPOSIT', 'COMPLETED', now(), TRUE);
+  ELSE
+    -- Create Payments as PENDING for external gateway
+    INSERT INTO "Payments"(payment_id, order_id, gateway_tx_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+    VALUES (gen_random_uuid(), v_order_id, NULL, p_deposit_amount, now(), p_payment_method, 'DEPOSIT', 'PENDING', now(), TRUE);
+  END IF;
+
+  -- Mark vehicle as RENTED
+  UPDATE "Vehicles" SET status = 'RENTED', updated_at = now() WHERE vehicle_id = p_vehicle_id;
+
+  RETURN v_order_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- 2) finalize_return_payment_using_wallet
+-- Called when returning vehicle: calculates due, handles wallet debit/refund or creates pending payments for gateway.
+CREATE OR REPLACE FUNCTION finalize_return_payment_using_wallet(
+  p_order_id UUID,
+  p_final_payment_method VARCHAR DEFAULT 'WALLET'   -- 'WALLET' or gateway name
+) RETURNS NUMERIC AS $$
+DECLARE
+  v_total_price NUMERIC;
+  v_deposit_sum NUMERIC := 0;
+  v_due NUMERIC;
+  v_customer_id UUID;
+  v_wallet_id UUID;
+  v_balance NUMERIC;
+  v_vehicle_id UUID;
+BEGIN
+  -- Lock order
+  SELECT total_price, customer_id, vehicle_id INTO v_total_price, v_customer_id, v_vehicle_id FROM "Orders" WHERE order_id = p_order_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Order % not found', p_order_id;
+  END IF;
+
+  -- Sum completed deposits
+  SELECT COALESCE(SUM(amount),0) INTO v_deposit_sum FROM "Payments" WHERE order_id = p_order_id AND payment_type = 'DEPOSIT' AND status = 'COMPLETED' AND isActive = TRUE;
+
+  v_due := v_total_price - v_deposit_sum;
+
+  IF v_due > 0 THEN
+    -- Charge customer
+    IF upper(coalesce(p_final_payment_method,'')) = 'WALLET' THEN
+      SELECT wallet_id, balance INTO v_wallet_id, v_balance FROM "Wallets" WHERE account_id = v_customer_id FOR UPDATE;
+      IF NOT FOUND THEN
+        RAISE EXCEPTION 'Wallet not found for account %', v_customer_id;
+      END IF;
+      IF v_balance < v_due THEN
+        RAISE EXCEPTION 'Insufficient wallet balance to settle final amount % for order %', v_due, p_order_id;
+      END IF;
+
+      -- Debit wallet
+      UPDATE "Wallets" SET balance = balance - v_due, updated_at = now() WHERE wallet_id = v_wallet_id;
+
+      -- Log wallet transaction
+      INSERT INTO "WalletTransactions"(transaction_id, wallet_id, order_id, amount, transaction_type, description, created_at, isActive)
+      VALUES (gen_random_uuid(), v_wallet_id, p_order_id, v_due, 'PAYMENT', 'Final payment for order '||p_order_id, now(), TRUE);
+
+      -- Create Payments record as COMPLETED
+      INSERT INTO "Payments"(payment_id, order_id, gateway_tx_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+      VALUES (gen_random_uuid(), p_order_id, 'WALLET-'||gen_random_uuid()::text, v_due, now(), 'WALLET', 'FINAL', 'COMPLETED', now(), TRUE);
+    ELSE
+      -- create FINAL payment PENDING for external gateway
+      INSERT INTO "Payments"(payment_id, order_id, gateway_tx_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+      VALUES (gen_random_uuid(), p_order_id, NULL, v_due, now(), p_final_payment_method, 'FINAL', 'PENDING', now(), TRUE);
+    END IF;
+
+  ELSIF v_due < 0 THEN
+    -- Need to refund the customer (create REFUND record PENDING)
+    INSERT INTO "Payments"(payment_id, order_id, gateway_tx_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+    VALUES (gen_random_uuid(), p_order_id, NULL, ABS(v_due), now(), p_final_payment_method, 'REFUND', 'PENDING', now(), TRUE);
+  END IF;
+
+  -- Update order status and vehicle availability
+  UPDATE "Orders" SET status = 'COMPLETED', updated_at = now() WHERE order_id = p_order_id;
+  IF v_vehicle_id IS NOT NULL THEN
+    UPDATE "Vehicles" SET status = 'AVAILABLE', updated_at = now() WHERE vehicle_id = v_vehicle_id AND status = 'RENTED';
+  END IF;
+
+  RETURN v_due;
+END;
+$$ LANGUAGE plpgsql;
 
 --===========Insert Data===========--
--- ---------------------------
--- Roles
--- ---------------------------
+
+-- =========================================
+-- ROLES
+-- =========================================
 INSERT INTO "Roles" (role_id, role_name, isActive) VALUES
 (gen_random_uuid(), 'Customer', TRUE),
 (gen_random_uuid(), 'Staff', TRUE),
 (gen_random_uuid(), 'Admin', TRUE);
 
--- ---------------------------
--- Accounts
--- ---------------------------
+-- =========================================
+-- ACCOUNTS
+-- =========================================
 INSERT INTO "Accounts" (account_id, username, password, email, contact_number, role_id, isActive) VALUES
 (gen_random_uuid(), 'john_doe', 'hashed_password1', 'john.doe@example.com', '1234567890', (SELECT role_id FROM "Roles" WHERE role_name = 'Customer' LIMIT 1), TRUE),
 (gen_random_uuid(), 'jane_smith', 'hashed_password2', 'jane.smith@example.com', '1234567891', (SELECT role_id FROM "Roles" WHERE role_name = 'Customer' LIMIT 1), TRUE),
@@ -569,383 +603,157 @@ INSERT INTO "Accounts" (account_id, username, password, email, contact_number, r
 (gen_random_uuid(), 'grace_kim', 'hashed_password9', 'grace.kim@example.com', '1234567898', (SELECT role_id FROM "Roles" WHERE role_name = 'Admin' LIMIT 1), TRUE),
 (gen_random_uuid(), 'henry_park', 'hashed_password10', 'henry.park@example.com', '1234567899', (SELECT role_id FROM "Roles" WHERE role_name = 'Admin' LIMIT 1), TRUE);
 
--- ---------------------------
--- VehicleTypes
--- ---------------------------
-INSERT INTO "VehicleTypes" (vehicle_type_id, type_name, description, created_at, isActive) VALUES
-(gen_random_uuid(), 'Sedan', 'Four-door passenger car', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SUV', 'Sport Utility Vehicle', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Truck', 'Heavy-duty vehicle for cargo', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Van', 'Large vehicle for passengers', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Electric', 'Battery-powered vehicle', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Hybrid', 'Gasoline and electric powered', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Motorcycle', 'Two-wheeled vehicle', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Convertible', 'Car with retractable roof', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Coupe', 'Two-door sporty car', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Hatchback', 'Car with rear door', CURRENT_TIMESTAMP, TRUE);
+-- =========================================
+-- REPLACED: VEHICLE TYPES (use your provided block)
+-- =========================================
+INSERT INTO "VehicleTypes" (vehicle_type_id, type_name, description, created_at, isActive)
+VALUES
+  (gen_random_uuid(), 'SUV', 'Dòng xe gầm cao, thể thao, phù hợp nhiều địa hình', NOW(), true),
+  (gen_random_uuid(), 'Sedan', 'Dòng xe 4 chỗ tiện nghi, tiết kiệm nhiên liệu', NOW(), true),
+  (gen_random_uuid(), 'Van', 'Dòng xe đa dụng, chở được nhiều người hoặc hàng hóa', NOW(), true);
 
--- ---------------------------
--- VehicleModels
--- ---------------------------
-INSERT INTO "VehicleModels" (vehicle_model_id, type_id, name, manufacturer, price_per_hour, specs, created_at, isActive) VALUES
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Sedan' LIMIT 1), 'Camry', 'Toyota', 15.00, '2.5L 4-cylinder', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Sedan' LIMIT 1), 'Accord', 'Honda', 14.50, '1.5L Turbo', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'SUV' LIMIT 1), 'RAV4', 'Toyota', 20.00, '2.5L 4-cylinder', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'SUV' LIMIT 1), 'CR-V', 'Honda', 19.50, '1.5L Turbo', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Electric' LIMIT 1), 'Model 3', 'Tesla', 25.00, 'Electric 75 kWh', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Electric' LIMIT 1), 'Leaf', 'Nissan', 22.00, 'Electric 40 kWh', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Truck' LIMIT 1), 'F-150', 'Ford', 30.00, '3.5L V6', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Van' LIMIT 1), 'Sienna', 'Toyota', 28.00, '3.5L V6', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Motorcycle' LIMIT 1), 'Ninja', 'Kawasaki', 10.00, '400cc', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT vehicle_type_id FROM "VehicleTypes" WHERE type_name = 'Coupe' LIMIT 1), 'Mustang', 'Ford', 18.00, '5.0L V8', CURRENT_TIMESTAMP, TRUE);
+-- =========================================
+-- REPLACED: VEHICLE MODELS (9 models as provided)
+-- =========================================
 
--- ---------------------------
--- Stations
--- ---------------------------
-INSERT INTO "Stations" (station_id, name, address, lat, long, capacity, image_url, isActive) VALUES
-(gen_random_uuid(), 'Downtown Hub', '123 Main St, City', 10.123456, 106.123456, 50, 'http://example.com/station1.jpg', TRUE),
-(gen_random_uuid(), 'North Station', '456 North Rd, City', 10.234567, 106.234567, 30, 'http://example.com/station2.jpg', TRUE),
-(gen_random_uuid(), 'South Station', '789 South Rd, City', 10.345678, 106.345678, 40, 'http://example.com/station3.jpg', TRUE),
-(gen_random_uuid(), 'East Station', '101 East Ave, City', 10.456789, 106.456789, 25, 'http://example.com/station4.jpg', TRUE),
-(gen_random_uuid(), 'West Station', '202 West Blvd, City', 10.567890, 106.567890, 35, 'http://example.com/station5.jpg', TRUE),
-(gen_random_uuid(), 'Central Hub', '303 Central St, City', 10.678901, 106.678901, 60, 'http://example.com/station6.jpg', TRUE),
-(gen_random_uuid(), 'Airport Station', '404 Airport Rd, City', 10.789012, 106.789012, 45, 'http://example.com/station7.jpg', TRUE),
-(gen_random_uuid(), 'Suburban Stop', '505 Suburb Ln, City', 10.890123, 106.890123, 20, 'http://example.com/station8.jpg', TRUE),
-(gen_random_uuid(), 'City Park', '606 Park Ave, City', 10.901234, 106.901234, 30, 'http://example.com/station9.jpg', TRUE),
-(gen_random_uuid(), 'Mall Station', '707 Mall Rd, City', 10.012345, 106.012345, 50, 'http://example.com/station10.jpg', TRUE);
+-- SUV Models
+INSERT INTO "VehicleModels" (vehicle_model_id, type_id, name, manufacturer, price_per_hour, specs, created_at, isActive)
+SELECT gen_random_uuid(), vt.vehicle_type_id, v.name, v.manufacturer, v.price, v.specs, NOW(), true
+FROM "VehicleTypes" vt,
+     (VALUES
+        ('Tesla Model X', 'Tesla', 50000, 'Dual Motor, AWD, 100kWh battery, 565km range'),
+        ('Toyota RAV4', 'Toyota', 35000, '2.5L Hybrid, 219 hp, Safety Sense, 500km range'),
+        ('Hyundai Tucson', 'Hyundai', 30000, '1.6L Turbo, SmartSense, 480km range')
+     ) AS v(name, manufacturer, price, specs)
+WHERE vt.type_name = 'SUV';
 
--- ---------------------------
--- Vehicles
--- Note: statuses chosen to match Orders below:
---   - Vehicles for ONGOING orders -> RENTED
---   - Vehicles for COMPLETED/PENDING orders -> AVAILABLE
--- ---------------------------
-INSERT INTO "Vehicles" (vehicle_id, serial_number, model_id, station_id, status, battery_level, battery_capacity, range, color, last_maintenance, img, created_at, isActive) VALUES
-(gen_random_uuid(), 'SN123456', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'Camry' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'Downtown Hub' LIMIT 1), 'AVAILABLE', NULL, NULL, NULL, 'Blue', '2025-09-01', 'http://example.com/vehicle1.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123457', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'Accord' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'North Station' LIMIT 1), 'AVAILABLE', NULL, NULL, NULL, 'Red', '2025-09-02', 'http://example.com/vehicle2.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123458', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'Model 3' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'South Station' LIMIT 1), 'RENTED', 80, 75, 300, 'White', '2025-09-03', 'http://example.com/vehicle3.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123459', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'Leaf' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'East Station' LIMIT 1), 'AVAILABLE', 60, 40, 150, 'Black', '2025-09-04', 'http://example.com/vehicle4.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123460', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'RAV4' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'West Station' LIMIT 1), 'AVAILABLE', NULL, NULL, NULL, 'Silver', '2025-09-05', 'http://example.com/vehicle5.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123461', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'CR-V' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'Central Hub' LIMIT 1), 'RENTED', NULL, NULL, NULL, 'Green', '2025-09-06', 'http://example.com/vehicle6.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123462', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'F-150' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'Airport Station' LIMIT 1), 'AVAILABLE', NULL, NULL, NULL, 'Blue', '2025-09-07', 'http://example.com/vehicle7.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123463', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'Sienna' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'Suburban Stop' LIMIT 1), 'AVAILABLE', NULL, NULL, NULL, 'White', '2025-09-08', 'http://example.com/vehicle8.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123464', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'Ninja' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'City Park' LIMIT 1), 'RENTED', NULL, NULL, NULL, 'Black', '2025-09-09', 'http://example.com/vehicle9.jpg', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SN123465', (SELECT vehicle_model_id FROM "VehicleModels" WHERE name = 'Mustang' LIMIT 1), (SELECT station_id FROM "Stations" WHERE name = 'Mall Station' LIMIT 1), 'AVAILABLE', NULL, NULL, NULL, 'Red', '2025-09-10', 'http://example.com/vehicle10.jpg', CURRENT_TIMESTAMP, TRUE);
+-- Sedan Models
+INSERT INTO "VehicleModels" (vehicle_model_id, type_id, name, manufacturer, price_per_hour, specs, created_at, isActive)
+SELECT gen_random_uuid(), vt.vehicle_type_id, v.name, v.manufacturer, v.price, v.specs, NOW(), true
+FROM "VehicleTypes" vt,
+     (VALUES
+        ('Toyota Camry', 'Toyota', 25000, '2.5L, Hybrid option, 5 seats, 550km range'),
+        ('Honda Accord', 'Honda', 27000, '1.5L Turbo, Eco Mode, 5 seats, 560km range'),
+        ('Tesla Model 3', 'Tesla', 45000, 'RWD, 60kWh, Autopilot, 530km range')
+     ) AS v(name, manufacturer, price, specs)
+WHERE vt.type_name = 'Sedan';
 
--- ---------------------------
--- Promotions
--- ---------------------------
+-- Van Models
+INSERT INTO "VehicleModels" (vehicle_model_id, type_id, name, manufacturer, price_per_hour, specs, created_at, isActive)
+SELECT gen_random_uuid(), vt.vehicle_type_id, v.name, v.manufacturer, v.price, v.specs, NOW(), true
+FROM "VehicleTypes" vt,
+     (VALUES
+        ('Ford Transit', 'Ford', 40000, '3.5L EcoBoost, 10 seats, 650km range'),
+        ('Mercedes-Benz V-Class', 'Mercedes-Benz', 55000, '2.0L Turbo, 7 seats, luxury interior'),
+        ('Hyundai Staria', 'Hyundai', 38000, '2.2L Diesel, 9 seats, spacious design')
+     ) AS v(name, manufacturer, price, specs)
+WHERE vt.type_name = 'Van';
+
+-- =========================================
+-- REPLACED: STATIONS (your 4 additional stations)
+-- =========================================
+INSERT INTO "Stations" (station_id, name, address, lat, long, capacity, image_url, isActive, updated_at)
+VALUES
+  (gen_random_uuid(), 'Trạm quận 1', '456 Lê Lợi, Quận 1, TP.HCM', 10.7769, 106.7009, 20, 'https://example.com/station_q1.jpg', true, NOW()),
+  (gen_random_uuid(), 'Trạm quận 5', '321 Trần Hưng Đạo, Quận 5, TP.HCM', 10.7574, 106.6662, 20, 'https://example.com/station_q5.jpg', true, NOW()),
+  (gen_random_uuid(), 'Trạm quận 7', '123 Nguyễn Văn Linh, Quận 7, TP.HCM', 10.7365, 106.7047, 20, 'https://example.com/station_q7.jpg', true, NOW()),
+  (gen_random_uuid(), 'Trạm Thủ Đức', '789 Phạm Văn Đồng, TP. Thủ Đức', 10.8523, 106.7521, 20, 'https://example.com/station_td.jpg', true, NOW());
+
+-- =========================================
+-- REPLACED: VEHICLES (generated from models/stations)
+-- =========================================
+INSERT INTO "Vehicles" (vehicle_id, serial_number, model_id, station_id, status, battery_level, battery_capacity, range, color, last_maintenance, img, created_at, isActive)
+SELECT
+  gen_random_uuid(),
+  'SN-' || LEFT(vm.name, 3) || '-' || i::text || '-' || floor(random()*10000)::text AS serial_number,
+  vm.vehicle_model_id,
+  s.station_id,
+  'AVAILABLE',
+  (80 + (random() * 20))::INT,
+  100,
+  (250 + (random() * 100))::INT,
+  CASE i
+    WHEN 1 THEN 'Đỏ'
+    WHEN 2 THEN 'Xanh'
+    WHEN 3 THEN 'Trắng'
+    ELSE 'Đen'
+  END,
+  NOW() - (interval '15 day' * random()),
+  'https://example.com/' || replace(lower(vm.name), ' ', '_') || '_' || i || '.jpg',
+  NOW(),
+  true
+FROM "VehicleModels" vm
+JOIN (SELECT station_id, ROW_NUMBER() OVER () AS idx FROM "Stations") s ON true
+CROSS JOIN generate_series(1, 4) AS g(i)
+WHERE s.idx = g.i;
+
+-- =========================================
+-- PROMOTIONS (sample - kept from previous seed)
+-- =========================================
 INSERT INTO "Promotions" (promotion_id, promo_code, discount_percentage, start_date, end_date, created_at, isActive) VALUES
 (gen_random_uuid(), 'SAVE10', 10.00, '2025-10-01 00:00:00', '2025-10-31 23:59:59', CURRENT_TIMESTAMP, TRUE),
 (gen_random_uuid(), 'WELCOME20', 20.00, '2025-10-01 00:00:00', '2025-10-15 23:59:59', CURRENT_TIMESTAMP, TRUE),
 (gen_random_uuid(), 'WEEKEND15', 15.00, '2025-10-03 00:00:00', '2025-10-05 23:59:59', CURRENT_TIMESTAMP, TRUE),
 (gen_random_uuid(), 'FIRST50', 50.00, '2025-10-01 00:00:00', '2025-10-10 23:59:59', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SUMMER25', 25.00, '2025-10-15 00:00:00', '2025-10-30 23:59:59', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'LOYALTY10', 10.00, '2025-10-01 00:00:00', '2025-12-31 23:59:59', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'FLASH30', 30.00, '2025-10-12 00:00:00', '2025-10-13 23:59:59', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'NEWUSER15', 15.00, '2025-10-01 00:00:00', '2025-10-20 23:59:59', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'RENTAL20', 20.00, '2025-10-05 00:00:00', '2025-10-25 23:59:59', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'SAVE50', 50.00, '2025-10-10 00:00:00', '2025-10-12 23:59:59', CURRENT_TIMESTAMP, TRUE);
+(gen_random_uuid(), 'SUMMER25', 25.00, '2025-10-15 00:00:00', '2025-10-30 23:59:59', CURRENT_TIMESTAMP, TRUE);
 
--- ---------------------------
--- Orders (10 sample)
--- Note: base_price included
--- ---------------------------
-INSERT INTO "Orders" (order_id, customer_id, vehicle_id, order_date, start_time, end_time, base_price, total_price, status, promotion_id, staff_id, created_at, isActive) VALUES
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123456' LIMIT 1), '2025-10-12 10:00:00', '2025-10-12 12:00:00', '2025-10-12 14:00:00', 25.00, 30.00, 'COMPLETED', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'SAVE10' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123457' LIMIT 1), '2025-10-12 11:00:00', '2025-10-12 13:00:00', '2025-10-12 15:00:00', 24.00, 29.00, 'PENDING', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123458' LIMIT 1), '2025-10-12 09:00:00', '2025-10-12 10:00:00', '2025-10-12 12:00:00', 45.00, 50.00, 'ONGOING', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'WELCOME20' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123459' LIMIT 1), '2025-10-12 08:00:00', '2025-10-12 09:00:00', '2025-10-12 11:00:00', 40.00, 44.00, 'COMPLETED', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123460' LIMIT 1), '2025-10-12 14:00:00', '2025-10-12 15:00:00', '2025-10-12 17:00:00', 36.00, 40.00, 'PENDING', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'FLASH30' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123461' LIMIT 1), '2025-10-12 12:00:00', '2025-10-12 13:00:00', '2025-10-12 15:00:00', 35.00, 39.00, 'ONGOING', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123462' LIMIT 1), '2025-10-12 07:00:00', '2025-10-12 08:00:00', '2025-10-12 10:00:00', 55.00, 60.00, 'COMPLETED', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'SAVE50' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123463' LIMIT 1), '2025-10-12 16:00:00', '2025-10-12 17:00:00', '2025-10-12 19:00:00', 50.00, 56.00, 'PENDING', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123464' LIMIT 1), '2025-10-12 10:00:00', '2025-10-12 11:00:00', '2025-10-12 13:00:00', 18.00, 20.00, 'ONGOING', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'NEWUSER15' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123465' LIMIT 1), '2025-10-12 13:00:00', '2025-10-12 14:00:00', '2025-10-12 16:00:00', 32.00, 36.00, 'COMPLETED', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), CURRENT_TIMESTAMP, TRUE);
+-- =========================================
+-- ORDERS (sample kept from previous seed)
+-- Note: use existing Vehicles inserted above (ORDER BY created_at)
+-- =========================================
+INSERT INTO "Orders" (order_id, customer_id, vehicle_id, order_code, order_date, start_time, end_time, base_price, total_price, status, promotion_id, staff_id, created_at, isActive) VALUES
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at LIMIT 1), gen_random_uuid()::text, '2025-10-12 10:00:00', '2025-10-12 12:00:00', '2025-10-12 14:00:00', 25.00, 30.00, 'COMPLETED', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'SAVE10' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 1 LIMIT 1), gen_random_uuid()::text, '2025-10-12 11:00:00', '2025-10-12 13:00:00', '2025-10-12 15:00:00', 24.00, 29.00, 'PENDING', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 2 LIMIT 1), gen_random_uuid()::text, '2025-10-12 09:00:00', '2025-10-12 10:00:00', '2025-10-12 12:00:00', 45.00, 50.00, 'ONGOING', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'WELCOME20' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 3 LIMIT 1), gen_random_uuid()::text, '2025-10-12 08:00:00', '2025-10-12 09:00:00', '2025-10-12 11:00:00', 40.00, 44.00, 'COMPLETED', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 4 LIMIT 1), gen_random_uuid()::text, '2025-10-12 14:00:00', '2025-10-12 15:00:00', '2025-10-12 17:00:00', 36.00, 40.00, 'PENDING', (SELECT promotion_id FROM "Promotions" WHERE promo_code = 'WEEKEND15' LIMIT 1), (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 5 LIMIT 1), gen_random_uuid()::text, '2025-10-12 12:00:00', '2025-10-12 13:00:00', '2025-10-12 15:00:00', 35.00, 39.00, 'ONGOING', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 6 LIMIT 1), gen_random_uuid()::text, '2025-10-12 07:00:00', '2025-10-12 08:00:00', '2025-10-12 10:00:00', 55.00, 60.00, 'COMPLETED', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 7 LIMIT 1), gen_random_uuid()::text, '2025-10-12 16:00:00', '2025-10-12 17:00:00', '2025-10-12 19:00:00', 50.00, 56.00, 'PENDING', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1),  (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 8 LIMIT 1), gen_random_uuid()::text, '2025-10-12 10:00:00', '2025-10-12 11:00:00', '2025-10-12 13:00:00', 18.00, 20.00, 'ONGOING', NULL, (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), CURRENT_TIMESTAMP, TRUE);
 
--- ---------------------------
--- Payments (mix of DEPOSIT / FINAL / REFUND; PENDING/COMPLETED)
--- Note: use subselects with LIMIT 1 to link to orders above
--- ---------------------------
+-- =========================================
+-- PAYMENTS (sample kept from previous seed)
+-- =========================================
+INSERT INTO "Payments" (payment_id, order_id, gateway_tx_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
+VALUES
+(gen_random_uuid(), (SELECT order_id FROM "Orders" ORDER BY created_at LIMIT 1), 'cc_tx_2001', 30.00, '2025-10-12 14:30:00', 'Credit Card', 'FINAL', 'COMPLETED', CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT order_id FROM "Orders" ORDER BY created_at OFFSET 1 LIMIT 1), NULL, 5.00, CURRENT_TIMESTAMP, 'MOMO', 'DEPOSIT', 'PENDING', CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT order_id FROM "Orders" ORDER BY created_at OFFSET 2 LIMIT 1), 'cc_tx_2003', 50.00, '2025-10-12 12:30:00', 'Credit Card', 'FINAL', 'COMPLETED', CURRENT_TIMESTAMP, TRUE);
 
--- Order total 30.00: DEPOSIT completed + FINAL completed
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, gateway_tx_id, gateway_response, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 30.00 LIMIT 1),
-  5.00,
-  '2025-10-12 12:05:00',
-  'MOMO',
-  'DEPOSIT',
-  'COMPLETED',
-  'momo_tx_dep_1001',
-  '{"mock":"deposit completed"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-),
-(
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 30.00 LIMIT 1),
-  25.00,
-  '2025-10-12 14:30:00',
-  'Credit Card',
-  'FINAL',
-  'COMPLETED',
-  'cc_tx_2001',
-  '{"mock":"final completed"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- Order total 29.00 (PENDING): deposit PENDING (not yet charged)
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 29.00 LIMIT 1),
-  5.00,
-  CURRENT_TIMESTAMP,
-  'MOMO',
-  'DEPOSIT',
-  'PENDING',
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- Order total 50.00 (ONGOING): deposit completed + final pending
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, gateway_tx_id, gateway_response, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 50.00 LIMIT 1),
-  20.00,
-  '2025-10-12 10:05:00',
-  'MOMO',
-  'DEPOSIT',
-  'COMPLETED',
-  'momo_tx_dep_1002',
-  '{"mock":"deposit ok"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-),
-(
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 50.00 LIMIT 1),
-  30.00,
-  CURRENT_TIMESTAMP,
-  'MOMO',
-  'FINAL',
-  'PENDING',
-  NULL,
-  NULL,
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- Order total 44.00 (COMPLETED): deposit completed + final completed
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, gateway_tx_id, gateway_response, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 44.00 LIMIT 1),
-  10.00,
-  '2025-10-12 09:05:00',
-  'MOMO',
-  'DEPOSIT',
-  'COMPLETED',
-  'momo_tx_dep_1003',
-  '{"mock":"deposit ok"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-),
-(
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 44.00 LIMIT 1),
-  34.00,
-  '2025-10-12 11:30:00',
-  'Bank Transfer',
-  'FINAL',
-  'COMPLETED',
-  'bank_tx_3001',
-  '{"mock":"final ok"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- Order total 40.00 (PENDING): no payments yet (simulate not charged)
-
--- Order total 39.00 (ONGOING): deposit completed + final pending
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, gateway_tx_id, gateway_response, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 39.00 LIMIT 1),
-  10.00,
-  '2025-10-12 12:05:00',
-  'MOMO',
-  'DEPOSIT',
-  'COMPLETED',
-  'momo_tx_dep_1004',
-  '{"mock":"deposit ok"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-),
-(
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 39.00 LIMIT 1),
-  29.00,
-  CURRENT_TIMESTAMP,
-  'MOMO',
-  'FINAL',
-  'PENDING',
-  NULL,
-  NULL,
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- Order total 60.00 (COMPLETED): deposit completed + final completed
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, gateway_tx_id, gateway_response, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 60.00 LIMIT 1),
-  30.00,
-  '2025-10-12 08:05:00',
-  'MOMO',
-  'DEPOSIT',
-  'COMPLETED',
-  'momo_tx_dep_1005',
-  '{"mock":"deposit ok"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-),
-(
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 60.00 LIMIT 1),
-  30.00,
-  '2025-10-12 10:30:00',
-  'Credit Card',
-  'FINAL',
-  'COMPLETED',
-  'cc_tx_2002',
-  '{"mock":"final ok"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- Order total 56.00 (PENDING): no payments yet
-
--- Order total 20.00 (ONGOING): deposit completed + final pending
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, gateway_tx_id, gateway_response, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 20.00 LIMIT 1),
-  5.00,
-  '2025-10-12 11:05:00',
-  'MOMO',
-  'DEPOSIT',
-  'COMPLETED',
-  'momo_tx_dep_1006',
-  '{"mock":"deposit ok"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-),
-(
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 20.00 LIMIT 1),
-  15.00,
-  CURRENT_TIMESTAMP,
-  'MOMO',
-  'FINAL',
-  'PENDING',
-  NULL,
-  NULL,
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- Order total 36.00 (COMPLETED): final completed (no deposit)
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, gateway_tx_id, gateway_response, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 36.00 LIMIT 1),
-  36.00,
-  '2025-10-12 16:30:00',
-  'PayPal',
-  'FINAL',
-  'COMPLETED',
-  'paypal_tx_4001',
-  '{"mock":"final completed"}'::jsonb,
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- ---------------------------
--- Add a REFUND PENDING example (simulate cancel after completed deposit)
--- For order total 29.00 (we created a deposit PENDING earlier), to show refund flow we'll:
--- 1) create a completed deposit for another order and then create refund pending
--- ---------------------------
--- Create a completed deposit on the 29.00 order to simulate user paid earlier (update the PENDING one)
-UPDATE "Payments"
-SET status = 'COMPLETED', gateway_tx_id = 'momo_tx_dep_1007', gateway_response = '{"mock":"charge success"}'::jsonb, updated_at = CURRENT_TIMESTAMP
-WHERE order_id = (SELECT order_id FROM "Orders" WHERE total_price = 29.00 LIMIT 1)
-  AND payment_type = 'DEPOSIT'
-  AND status = 'PENDING'
-RETURNING payment_id;
-
--- Create REFUND PENDING for that order (cancel flow)
-INSERT INTO "Payments" (payment_id, order_id, amount, payment_date, payment_method, payment_type, status, created_at, isActive)
-VALUES (
-  gen_random_uuid(),
-  (SELECT order_id FROM "Orders" WHERE total_price = 29.00 LIMIT 1),
-  5.00,
-  CURRENT_TIMESTAMP,
-  'MOMO',
-  'REFUND',
-  'PENDING',
-  CURRENT_TIMESTAMP,
-  TRUE
-);
-
--- ---------------------------
--- Feedbacks
--- ---------------------------
+-- =========================================
+-- FEEDBACKS (sample kept)
+-- =========================================
 INSERT INTO "Feedbacks" (feedback_id, customer_id, order_id, rating, comment, feedback_date, created_at, isActive) VALUES
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT order_id FROM "Orders" WHERE total_price = 30.00 LIMIT 1), 5, 'Great service!', '2025-10-12 14:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1), (SELECT order_id FROM "Orders" WHERE total_price = 29.00 LIMIT 1), 4, 'Good but slow', '2025-10-12 15:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1), (SELECT order_id FROM "Orders" WHERE total_price = 50.00 LIMIT 1), 5, 'Amazing vehicle!', '2025-10-12 12:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT order_id FROM "Orders" WHERE total_price = 44.00 LIMIT 1), 3, 'Battery was low', '2025-10-12 11:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1), (SELECT order_id FROM "Orders" WHERE total_price = 40.00 LIMIT 1), 4, 'Comfortable ride', '2025-10-12 17:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1), (SELECT order_id FROM "Orders" WHERE total_price = 39.00 LIMIT 1), 5, 'Very clean', '2025-10-12 15:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT order_id FROM "Orders" WHERE total_price = 60.00 LIMIT 1), 4, 'Good truck', '2025-10-12 10:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1), (SELECT order_id FROM "Orders" WHERE total_price = 56.00 LIMIT 1), 3, 'Late delivery', '2025-10-12 19:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'alice_wong' LIMIT 1), (SELECT order_id FROM "Orders" WHERE total_price = 20.00 LIMIT 1), 5, 'Fun motorcycle!', '2025-10-12 13:45:00', CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1),  (SELECT order_id FROM "Orders" WHERE total_price = 36.00 LIMIT 1), 4, 'Nice car', '2025-10-12 16:45:00', CURRENT_TIMESTAMP, TRUE);
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1), (SELECT order_id FROM "Orders" ORDER BY created_at LIMIT 1), 5, 'Great service!', '2025-10-12 14:45:00', CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1), (SELECT order_id FROM "Orders" ORDER BY created_at OFFSET 1 LIMIT 1), 4, 'Good but slow', '2025-10-12 15:45:00', CURRENT_TIMESTAMP, TRUE);
 
--- ---------------------------
--- Reports
--- ---------------------------
+-- =========================================
+-- REPORTS (sample kept)
+-- =========================================
 INSERT INTO "Reports" (report_id, report_type, generated_date, text, account_id, vehicle_id, created_at, isActive) VALUES
-(gen_random_uuid(), 'Maintenance', '2025-10-12 09:00:00', 'Vehicle needs tire replacement', (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123456' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Incident', '2025-10-12 10:00:00', 'Minor scratch reported', (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123457' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Usage', '2025-10-12 11:00:00', 'High battery usage', (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123458' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Maintenance', '2025-10-12 12:00:00', 'Battery check required', (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123459' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Incident', '2025-10-12 13:00:00', 'Bumper damage', (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123460' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Usage', '2025-10-12 14:00:00', 'Low fuel efficiency', (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123461' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Maintenance', '2025-10-12 15:00:00', 'Brake inspection needed', (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123462' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Incident', '2025-10-12 16:00:00', 'Window crack reported', (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123463' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Usage', '2025-10-12 17:00:00', 'High mileage recorded', (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123464' LIMIT 1), CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), 'Maintenance', '2025-10-12 18:00:00', 'Oil change required', (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" WHERE serial_number = 'SN123465' LIMIT 1), CURRENT_TIMESTAMP, TRUE);
+(gen_random_uuid(), 'Maintenance', '2025-10-12 09:00:00', 'Vehicle needs tire replacement', (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at LIMIT 1), CURRENT_TIMESTAMP, TRUE),
+(gen_random_uuid(), 'Incident', '2025-10-12 10:00:00', 'Minor scratch reported', (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), (SELECT vehicle_id FROM "Vehicles" ORDER BY created_at OFFSET 1 LIMIT 1), CURRENT_TIMESTAMP, TRUE);
 
--- ---------------------------
--- Staff_Revenues
--- ---------------------------
+-- =========================================
+-- STAFF_REVENUES (sample kept)
+-- =========================================
 INSERT INTO "Staff_Revenues" (staff_revenue_id, staff_id, revenue_date, total_revenue, commission, created_at, isActive) VALUES
 (gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), '2025-10-12 00:00:00', 500.00, 50.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), '2025-10-12 00:00:00', 450.00, 45.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), '2025-10-12 00:00:00', 600.00, 60.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), '2025-10-11 00:00:00', 400.00, 40.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), '2025-10-11 00:00:00', 300.00, 30.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), '2025-10-11 00:00:00', 550.00, 55.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), '2025-10-10 00:00:00', 350.00, 35.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), '2025-10-10 00:00:00', 400.00, 40.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'david_brown' LIMIT 1), '2025-10-10 00:00:00', 500.00, 50.00, CURRENT_TIMESTAMP, TRUE),
-(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'bob_jones' LIMIT 1), '2025-10-09 00:00:00', 450.00, 45.00, CURRENT_TIMESTAMP, TRUE);
+(gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'carol_white' LIMIT 1), '2025-10-12 00:00:00', 450.00, 45.00, CURRENT_TIMESTAMP, TRUE);
 
---SWDDD
+-- =========================================
+-- OPTIONAL: Wallets and WalletTransactions (kept sample)
+-- =========================================
+INSERT INTO "Wallets" (wallet_id, account_id, balance, created_at, isActive)
+VALUES
+  (gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1), 1000.00, CURRENT_TIMESTAMP, TRUE),
+  (gen_random_uuid(), (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1), 500.00, CURRENT_TIMESTAMP, TRUE);
+
+INSERT INTO "WalletTransactions" (transaction_id, wallet_id, order_id, amount, transaction_type, description, created_at, isActive)
+VALUES
+  (gen_random_uuid(), (SELECT wallet_id FROM "Wallets" WHERE account_id = (SELECT account_id FROM "Accounts" WHERE username = 'john_doe' LIMIT 1) LIMIT 1), NULL, 1000.00, 'DEPOSIT', 'Initial topup', CURRENT_TIMESTAMP, TRUE),
+  (gen_random_uuid(), (SELECT wallet_id FROM "Wallets" WHERE account_id = (SELECT account_id FROM "Accounts" WHERE username = 'jane_smith' LIMIT 1) LIMIT 1), NULL, 500.00, 'DEPOSIT', 'Initial topup', CURRENT_TIMESTAMP, TRUE);
+-- =========================================
+-- DONE
+-- =========================================

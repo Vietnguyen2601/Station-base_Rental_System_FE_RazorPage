@@ -33,6 +33,10 @@ public partial class Vehicle
     public DateTime? UpdatedAt { get; set; }
     public VehicleStatus Status { get; set; }
 
+    public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+
+    public virtual ICollection<DamageReport> DamageReports { get; set; } = new List<DamageReport>();
+
     public virtual VehicleModel Model { get; set; } = null!;
 
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
