@@ -73,7 +73,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     OrderId = request.OrderId,
                     Amount = request.Amount,
                     PaymentMethod = PaymentMethod.VNPAY.ToString(),
-                    PaymentType = PaymentType.DEPOSIT, // Set payment type for deposit payments
+                    PaymentType = PaymentType.DEPOSIT,
                     Status = PaymentStatus.PENDING.ToString(),
                     GatewayTxId = txnRef,
                     IdempotencyKey = Guid.NewGuid().ToString(),

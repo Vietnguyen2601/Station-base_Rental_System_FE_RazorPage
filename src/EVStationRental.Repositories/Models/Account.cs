@@ -23,6 +23,8 @@ public partial class Account
 
     public DateTime? UpdatedAt { get; set; }
 
+    public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
 
     public virtual ICollection<Order> OrderCustomers { get; set; } = new List<Order>();
@@ -34,4 +36,6 @@ public partial class Account
     public virtual Role Role { get; set; } = null!;
 
     public virtual ICollection<StaffRevenue> StaffRevenues { get; set; } = new List<StaffRevenue>();
+
+    public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
 }

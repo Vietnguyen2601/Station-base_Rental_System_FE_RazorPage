@@ -17,6 +17,8 @@ public partial class Report
 
     public Guid VehicleId { get; set; }
 
+    public string? Img { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }

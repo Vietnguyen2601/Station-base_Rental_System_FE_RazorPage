@@ -19,6 +19,10 @@ public partial class ElectricVehicleDBContext : DbContext
 
     public virtual DbSet<Account> Accounts { get; set; }
 
+    public virtual DbSet<Contract> Contracts { get; set; }
+
+    public virtual DbSet<DamageReport> DamageReports { get; set; }
+
     public virtual DbSet<Feedback> Feedbacks { get; set; }
 
     public virtual DbSet<Order> Orders { get; set; }
@@ -40,6 +44,10 @@ public partial class ElectricVehicleDBContext : DbContext
     public virtual DbSet<VehicleModel> VehicleModels { get; set; }
 
     public virtual DbSet<VehicleType> VehicleTypes { get; set; }
+
+    public virtual DbSet<Wallet> Wallets { get; set; }
+
+    public virtual DbSet<WalletTransaction> WalletTransactions { get; set; }
 
     public static string GetConnectionString(string connectionStringName)
     {
@@ -69,12 +77,16 @@ public partial class ElectricVehicleDBContext : DbContext
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
         }
     }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
-            .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.OrderStatus>("order_status")
-            .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.VehicleStatus>("vehicle_status")
-            .HasPostgresEnum<EVStationRental.Common.Enums.EnumModel.PaymentType>("payment_type_enum")
+            .HasPostgresEnum("damage_level_enum", new[] { "MINOR", "MODERATE", "SEVERE" })
+            .HasPostgresEnum("order_status", new[] { "PENDING", "CONFIRMED", "ONGOING", "COMPLETED", "CANCELED" })
+            .HasPostgresEnum("payment_type_enum", new[] { "DEPOSIT", "FINAL", "REFUND" })
+            .HasPostgresEnum("transaction_type_enum", new[] { "DEPOSIT", "PAYMENT", "REFUND" })
+            .HasPostgresEnum("vehicle_status", new[] { "AVAILABLE", "RENTED", "MAINTENANCE", "CHARGING" })
+            .HasPostgresExtension("pgcrypto")
             .HasPostgresExtension("uuid-ossp");
 
         modelBuilder.Entity<Account>(entity =>
@@ -112,6 +124,85 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasForeignKey(d => d.RoleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("Accounts_role_id_fkey");
+        });
+
+        modelBuilder.Entity<Contract>(entity =>
+        {
+            entity.HasKey(e => e.ContractId).HasName("Contracts_pkey");
+
+            entity.Property(e => e.ContractId)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasColumnName("contract_id");
+            entity.Property(e => e.ContractDate)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("contract_date");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.CustomerId).HasColumnName("customer_id");
+            entity.Property(e => e.FileUrl)
+                .HasColumnType("character varying")
+                .HasColumnName("file_url");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updated_at");
+            entity.Property(e => e.VehicleId).HasColumnName("vehicle_id");
+
+            entity.HasOne(d => d.Customer).WithMany(p => p.Contracts)
+                .HasForeignKey(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Contracts_customer_id_fkey");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.Contracts)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Contracts_order_id_fkey");
+
+            entity.HasOne(d => d.Vehicle).WithMany(p => p.Contracts)
+                .HasForeignKey(d => d.VehicleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Contracts_vehicle_id_fkey");
+        });
+
+        modelBuilder.Entity<DamageReport>(entity =>
+        {
+            entity.HasKey(e => e.DamageId).HasName("DamageReports_pkey");
+
+            entity.Property(e => e.DamageId)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasColumnName("damage_id");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.EstimatedCost).HasColumnName("estimated_cost");
+            entity.Property(e => e.Img)
+                .HasColumnType("character varying")
+                .HasColumnName("img");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updated_at");
+            entity.Property(e => e.VehicleId).HasColumnName("vehicle_id");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.DamageReports)
+                .HasForeignKey(d => d.OrderId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("DamageReports_order_id_fkey");
+
+            entity.HasOne(d => d.Vehicle).WithMany(p => p.DamageReports)
+                .HasForeignKey(d => d.VehicleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("DamageReports_vehicle_id_fkey");
         });
 
         modelBuilder.Entity<Feedback>(entity =>
@@ -154,6 +245,8 @@ public partial class ElectricVehicleDBContext : DbContext
         {
             entity.HasKey(e => e.OrderId).HasName("Orders_pkey");
 
+            entity.HasIndex(e => e.OrderCode, "Orders_order_code_key").IsUnique();
+
             entity.Property(e => e.OrderId)
                 .HasDefaultValueSql("gen_random_uuid()")
                 .HasColumnName("order_id");
@@ -169,10 +262,16 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
+            entity.Property(e => e.OrderCode)
+                .HasColumnType("character varying")
+                .HasColumnName("order_code");
             entity.Property(e => e.OrderDate)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("order_date");
             entity.Property(e => e.PromotionId).HasColumnName("promotion_id");
+            entity.Property(e => e.ReturnTime)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("return_time");
             entity.Property(e => e.StaffId).HasColumnName("staff_id");
             entity.Property(e => e.StartTime)
                 .HasColumnType("timestamp without time zone")
@@ -182,8 +281,6 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
             entity.Property(e => e.VehicleId).HasColumnName("vehicle_id");
-            entity.Property(e => e.Status)
-                .HasColumnName("status");
 
             entity.HasOne(d => d.Customer).WithMany(p => p.OrderCustomers)
                 .HasForeignKey(d => d.CustomerId)
@@ -228,7 +325,7 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasColumnType("jsonb")
                 .HasColumnName("gateway_response");
             entity.Property(e => e.GatewayTxId)
-                .HasMaxLength(255)
+                .HasColumnType("character varying")
                 .HasColumnName("gateway_tx_id");
             entity.Property(e => e.IdempotencyKey)
                 .HasMaxLength(255)
@@ -240,13 +337,9 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.PaymentDate)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("payment_date");
-            entity.Property(e => e.PaymentType)
-                .HasColumnName("payment_type");
-
             entity.Property(e => e.PaymentMethod)
                 .HasColumnType("character varying")
                 .HasColumnName("payment_method");
-
             entity.Property(e => e.Status)
                 .HasColumnType("character varying")
                 .HasColumnName("status");
@@ -304,6 +397,9 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.GeneratedDate)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("generated_date");
+            entity.Property(e => e.Img)
+                .HasColumnType("character varying")
+                .HasColumnName("img");
             entity.Property(e => e.Isactive)
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
@@ -448,8 +544,6 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
-            entity.Property(e => e.Status)
-                .HasColumnName("status");
 
             entity.HasOne(d => d.Model).WithMany(p => p.Vehicles)
                 .HasForeignKey(d => d.ModelId)
@@ -519,6 +613,63 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
+        });
+
+        modelBuilder.Entity<Wallet>(entity =>
+        {
+            entity.HasKey(e => e.WalletId).HasName("Wallets_pkey");
+
+            entity.Property(e => e.WalletId)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasColumnName("wallet_id");
+            entity.Property(e => e.AccountId).HasColumnName("account_id");
+            entity.Property(e => e.Balance).HasColumnName("balance");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("updated_at");
+
+            entity.HasOne(d => d.Account).WithMany(p => p.Wallets)
+                .HasForeignKey(d => d.AccountId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("Wallets_account_id_fkey");
+        });
+
+        modelBuilder.Entity<WalletTransaction>(entity =>
+        {
+            entity.HasKey(e => e.TransactionId).HasName("WalletTransactions_pkey");
+
+            entity.Property(e => e.TransactionId)
+                .HasDefaultValueSql("gen_random_uuid()")
+                .HasColumnName("transaction_id");
+            entity.Property(e => e.Amount).HasColumnName("amount");
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP")
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("created_at");
+            entity.Property(e => e.Description)
+                .HasColumnType("character varying")
+                .HasColumnName("description");
+            entity.Property(e => e.Isactive)
+                .HasDefaultValue(true)
+                .HasColumnName("isactive");
+            entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.WalletId).HasColumnName("wallet_id");
+
+            entity.HasOne(d => d.Order).WithMany(p => p.WalletTransactions)
+                .HasForeignKey(d => d.OrderId)
+                .HasConstraintName("WalletTransactions_order_id_fkey");
+
+            entity.HasOne(d => d.Wallet).WithMany(p => p.WalletTransactions)
+                .HasForeignKey(d => d.WalletId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("WalletTransactions_wallet_id_fkey");
         });
 
         OnModelCreatingPartial(modelBuilder);

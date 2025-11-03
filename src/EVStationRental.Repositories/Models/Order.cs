@@ -1,6 +1,6 @@
-﻿using System;
+﻿using EVStationRental.Common.Enums.EnumModel;
+using System;
 using System.Collections.Generic;
-using EVStationRental.Common.Enums.EnumModel;
 
 namespace EVStationRental.Repositories.Models;
 
@@ -12,11 +12,15 @@ public partial class Order
 
     public Guid VehicleId { get; set; }
 
+    public string OrderCode { get; set; } = null!;
+
     public DateTime OrderDate { get; set; }
 
     public DateTime StartTime { get; set; }
 
     public DateTime? EndTime { get; set; }
+
+    public DateTime? ReturnTime { get; set; }
 
     public decimal BasePrice { get; set; }
 
@@ -31,10 +35,14 @@ public partial class Order
     public DateTime? UpdatedAt { get; set; }
 
     public bool Isactive { get; set; }
-
     public OrderStatus Status { get; set; }
 
+
+    public virtual ICollection<Contract> Contracts { get; set; } = new List<Contract>();
+
     public virtual Account Customer { get; set; } = null!;
+
+    public virtual ICollection<DamageReport> DamageReports { get; set; } = new List<DamageReport>();
 
     public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
 
@@ -45,4 +53,6 @@ public partial class Order
     public virtual Account? Staff { get; set; }
 
     public virtual Vehicle Vehicle { get; set; } = null!;
+
+    public virtual ICollection<WalletTransaction> WalletTransactions { get; set; } = new List<WalletTransaction>();
 }
