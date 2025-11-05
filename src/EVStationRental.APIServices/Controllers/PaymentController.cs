@@ -419,6 +419,25 @@ namespace EVStationRental.APIServices.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Hoàn tất thanh toán khi trả xe (NEW WALLET-BASED FLOW)
+        /// Staff gọi endpoint này khi khách trả xe
+        /// </summary>
+        [HttpPost("finalize-return")]
+        [Authorize(Roles = "STAFF,ADMIN")]
+        public async Task<IActionResult> FinalizeReturnPayment([FromBody] FinalizeReturnPaymentDTO request)
+        {
+            var result = await _paymentService.FinalizeReturnPaymentAsync(request);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
+                400 => BadRequest(result),
+                404 => NotFound(result),
+                _ => StatusCode(500, result)
+            };
+        }
     }
 
     /// <summary>

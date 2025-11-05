@@ -21,6 +21,7 @@ namespace EVStationRental.Repositories.UnitOfWork
         private IOrderRepository orderRepository;
         private IPaymentRepository paymentRepository;
         private IFeedbackRepository feedbackRepository;
+        private IWalletRepository walletRepository;
 
         public UnitOfWork()
         {
@@ -112,6 +113,14 @@ namespace EVStationRental.Repositories.UnitOfWork
             get
             {
                 return feedbackRepository ??= new Repositories.FeedbackRepository(_context);
+            }
+        }
+
+        public IWalletRepository WalletRepository
+        {
+            get
+            {
+                return walletRepository ??= new Repositories.WalletRepository(_context);
             }
         }
     }

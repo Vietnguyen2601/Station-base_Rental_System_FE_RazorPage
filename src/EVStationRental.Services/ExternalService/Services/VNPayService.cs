@@ -208,11 +208,6 @@ namespace EVStationRental.Services.ExternalService.Services
             var vnpSecureHash = Utils.HmacSHA512(vnpHashSecret, signDataString);
             baseUrl += "vnp_SecureHash=" + vnpSecureHash;
 
-            // Debug logging for signature
-            Console.WriteLine($"Sign Data: {signDataString}");
-            Console.WriteLine($"Hash Secret: {vnpHashSecret}");  
-            Console.WriteLine($"Generated Hash: {vnpSecureHash}");
-
             return baseUrl;
         }
 
