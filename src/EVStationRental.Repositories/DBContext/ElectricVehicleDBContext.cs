@@ -276,6 +276,8 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.StartTime)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("start_time");
+            entity.Property(e => e.Status)
+                .HasColumnName("status");
             entity.Property(e => e.TotalPrice).HasColumnName("total_price");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
@@ -541,6 +543,8 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasColumnType("character varying")
                 .HasColumnName("serial_number");
             entity.Property(e => e.StationId).HasColumnName("station_id");
+            entity.Property(e => e.Status)
+                .HasColumnName("status");
             entity.Property(e => e.UpdatedAt)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("updated_at");
@@ -660,6 +664,9 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasDefaultValue(true)
                 .HasColumnName("isactive");
             entity.Property(e => e.OrderId).HasColumnName("order_id");
+            entity.Property(e => e.TransactionType)
+                .HasColumnName("transaction_type")
+                .HasConversion<string>();
             entity.Property(e => e.WalletId).HasColumnName("wallet_id");
 
             entity.HasOne(d => d.Order).WithMany(p => p.WalletTransactions)

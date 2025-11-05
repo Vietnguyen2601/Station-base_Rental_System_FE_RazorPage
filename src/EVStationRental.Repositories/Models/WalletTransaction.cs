@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EVStationRental.Common.Enums.EnumModel;
+using System;
 using System.Collections.Generic;
 
 namespace EVStationRental.Repositories.Models;
@@ -12,6 +13,8 @@ public partial class WalletTransaction
     public Guid? OrderId { get; set; }
 
     public decimal Amount { get; set; }
+
+    public TransactionType TransactionType { get; set; }
 
     public string? Description { get; set; }
 

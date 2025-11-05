@@ -664,5 +664,98 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
 
             return finalPrice;
         }
+
+        /// <summary>
+        /// Finalize return payment when customer returns vehicle
+        /// </summary>
+        public async Task<IServiceResult> FinalizeReturnPaymentAsync(FinalizeReturnPaymentDTO request)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetOrderByIdAsync(request.OrderId);
+                if (order == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy đơn hàng"
+                    };
+                }
+
+                if (order.Status == OrderStatus.COMPLETED)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Đơn hàng đã được hoàn thành trước đó"
+                    };
+                }
+
+                if (order.Status != OrderStatus.ONGOING)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = $"Không thể hoàn tất thanh toán cho đơn hàng có trạng thái {order.Status}"
+                    };
+                }
+
+                // Add extra charges if any
+                if (request.ExtraCharges.HasValue && request.ExtraCharges.Value > 0)
+                {
+                    order.TotalPrice += request.ExtraCharges.Value;
+                    order.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.OrderRepository.UpdateOrderAsync(order);
+                }
+
+                // Call repository method to finalize payment
+                var amountDue = await _unitOfWork.OrderRepository.FinalizeReturnPaymentUsingWalletAsync(
+                    request.OrderId,
+                    request.FinalPaymentMethod);
+
+                // Refresh order to get updated data
+                order = await _unitOfWork.OrderRepository.GetOrderByIdAsync(request.OrderId);
+
+                var depositPaid = order.Payments
+                    .Where(p => p.PaymentType == PaymentType.DEPOSIT && p.Status == "COMPLETED")
+                    .Sum(p => p.Amount);
+
+                var response = new FinalizeReturnPaymentResponseDTO
+                {
+                    OrderId = order.OrderId,
+                    OrderCode = order.OrderCode,
+                    TotalPrice = order.TotalPrice,
+                    DepositPaid = depositPaid,
+                    ExtraCharges = request.ExtraCharges ?? 0,
+                    FinalAmountDue = amountDue,
+                    PaymentMethod = request.FinalPaymentMethod,
+                    PaymentStatus = amountDue > 0 ? "PENDING" : "COMPLETED",
+                    OrderStatus = order.Status.ToString(),
+                    CompletedAt = DateTime.Now,
+                    Message = amountDue > 0 
+                        ? $"Khách hàng cần thanh toán thêm {amountDue:N0} VNĐ"
+                        : amountDue < 0 
+                            ? $"Hoàn trả cho khách hàng {Math.Abs(amountDue):N0} VNĐ"
+                            : "Đơn hàng đã được thanh toán đầy đủ"
+                };
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_UPDATE_CODE,
+                    Message = "Hoàn tất thanh toán thành công",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error finalizing return payment for order {OrderId}", request.OrderId);
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi hoàn tất thanh toán: {ex.Message}",
+                    Data = new { error = ex.Message, innerError = ex.InnerException?.Message }
+                };
+            }
+        }
     }
 }

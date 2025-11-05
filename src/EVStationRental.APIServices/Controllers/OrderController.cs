@@ -156,5 +156,69 @@ namespace EVStationRental.APIServices.Controllers
                 _ => StatusCode(500, result)
             };
         }
+
+        /// <summary>
+        /// Tạo đơn hàng với thanh toán cọc qua ví hoặc gateway (NEW FLOW)
+        /// </summary>
+        [HttpPost("create-with-wallet")]
+        public async Task<IActionResult> CreateOrderWithWallet([FromBody] CreateOrderWithWalletDTO request)
+        {
+            var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (customerIdClaim == null || !Guid.TryParse(customerIdClaim.Value, out var customerId))
+            {
+                return Unauthorized(new { Message = "Invalid authentication token" });
+            }
+
+            var result = await _orderService.CreateOrderWithWalletDepositAsync(customerId, request);
+
+            return result.StatusCode switch
+            {
+                201 => CreatedAtAction(nameof(GetOrderById), new { orderId = ((dynamic)result.Data).OrderId }, result),
+                404 => NotFound(result),
+                400 => BadRequest(result),
+                _ => StatusCode(500, result)
+            };
+        }
+
+        /// <summary>
+        /// Xác thực mã đơn hàng 6 ký tự (Dành cho nhân viên khi khách đến nhận xe)
+        /// </summary>
+        [HttpPost("verify-code")]
+        [Authorize(Roles = "STAFF,ADMIN")]
+        public async Task<IActionResult> VerifyOrderCode([FromBody] VerifyOrderCodeDTO request)
+        {
+            var result = await _orderService.VerifyOrderCodeAsync(request.OrderCode);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
+                404 => NotFound(result),
+                _ => StatusCode(500, result)
+            };
+        }
+
+        /// <summary>
+        /// Xác nhận đơn hàng và chuyển sang trạng thái ONGOING (Nhân viên xác nhận sau khi kiểm tra)
+        /// </summary>
+        [HttpPut("{orderId}/confirm")]
+        [Authorize(Roles = "STAFF,ADMIN")]
+        public async Task<IActionResult> ConfirmOrderByStaff(Guid orderId)
+        {
+            var staffIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (staffIdClaim == null || !Guid.TryParse(staffIdClaim.Value, out var staffId))
+            {
+                return Unauthorized(new { Message = "Invalid authentication token" });
+            }
+
+            var result = await _orderService.ConfirmOrderByStaffAsync(orderId, staffId);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
+                404 => NotFound(result),
+                400 => BadRequest(result),
+                _ => StatusCode(500, result)
+            };
+        }
     }
 }

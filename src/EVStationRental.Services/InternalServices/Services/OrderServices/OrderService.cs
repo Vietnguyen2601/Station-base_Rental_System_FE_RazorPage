@@ -413,5 +413,291 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 };
             }
         }
+
+        /// <summary>
+        /// Create order with wallet deposit - uses stored procedure
+        /// </summary>
+        public async Task<IServiceResult> CreateOrderWithWalletDepositAsync(Guid customerId, CreateOrderWithWalletDTO request)
+        {
+            try
+            {
+                // Validate time ranges
+                if (request.StartTime <= DateTime.Now)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Thời gian bắt đầu phải sau thời điểm hiện tại"
+                    };
+                }
+
+                if (request.EndTime <= request.StartTime)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Thời gian kết thúc phải sau thời gian bắt đầu"
+                    };
+                }
+
+                // Check vehicle exists
+                var vehicle = await _unitOfWork.VehicleRepository.GetVehicleByIdAsync(request.VehicleId);
+                if (vehicle == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Xe không tồn tại trong hệ thống"
+                    };
+                }
+
+                // Get vehicle model to calculate prices
+                var vehicleModel = await _unitOfWork.VehicleModelRepository.GetVehicleModelByIdAsync(vehicle.ModelId);
+                if (vehicleModel == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_EXCEPTION,
+                        Message = "Không tìm thấy thông tin mẫu xe"
+                    };
+                }
+
+                // Calculate prices
+                var totalHours = (decimal)(request.EndTime - request.StartTime).TotalHours;
+                var basePrice = totalHours * vehicleModel.PricePerHour;
+                var totalPrice = basePrice;
+                Guid? promotionId = null;
+
+                // Apply promotion if provided
+                if (!string.IsNullOrEmpty(request.PromotionCode))
+                {
+                    var promotion = await _unitOfWork.PromotionRepository.GetByCodeAsync(request.PromotionCode);
+                    
+                    if (promotion == null)
+                    {
+                        return new ServiceResult
+                        {
+                            StatusCode = Const.WARNING_NO_DATA_CODE,
+                            Message = "Mã khuyến mãi không tồn tại"
+                        };
+                    }
+
+                    if (!promotion.Isactive || DateTime.Now < promotion.StartDate || DateTime.Now > promotion.EndDate)
+                    {
+                        return new ServiceResult
+                        {
+                            StatusCode = Const.ERROR_VALIDATION_CODE,
+                            Message = "Mã khuyến mãi không còn hiệu lực"
+                        };
+                    }
+
+                    totalPrice = basePrice * (1 - promotion.DiscountPercentage / 100);
+                    promotionId = promotion.PromotionId;
+                }
+
+                // Calculate deposit (10% of base price)
+                var depositAmount = basePrice * 0.10m;
+
+                // Call stored procedure to create order with deposit
+                var orderId = await _unitOfWork.OrderRepository.CreateOrderWithDepositUsingWalletAsync(
+                    customerId,
+                    request.VehicleId,
+                    DateTime.Now,
+                    request.StartTime,
+                    request.EndTime,
+                    basePrice,
+                    totalPrice,
+                    depositAmount,
+                    request.PaymentMethod,
+                    promotionId,
+                    null  // staffId will be set later when confirmed
+                );
+
+                // Get created order with details
+                var createdOrder = await _unitOfWork.OrderRepository.GetOrderByIdAsync(orderId);
+                if (createdOrder == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_EXCEPTION,
+                        Message = "Không thể lấy thông tin đơn hàng sau khi tạo"
+                    };
+                }
+
+                var response = new CreateOrderWithWalletResponseDTO
+                {
+                    OrderId = createdOrder.OrderId,
+                    OrderCode = createdOrder.OrderCode,
+                    OrderDate = createdOrder.OrderDate,
+                    StartTime = createdOrder.StartTime,
+                    EndTime = createdOrder.EndTime ?? DateTime.MinValue,
+                    BasePrice = createdOrder.BasePrice,
+                    TotalPrice = createdOrder.TotalPrice,
+                    DepositAmount = depositAmount,
+                    Status = createdOrder.Status.ToString(),
+                    PaymentMethod = request.PaymentMethod,
+                    Vehicle = new VehicleInfoDTO
+                    {
+                        VehicleId = vehicle.VehicleId,
+                        LicensePlate = vehicle.SerialNumber,
+                        ModelName = vehicleModel.Name
+                    },
+                    Contract = createdOrder.Contracts.FirstOrDefault() != null 
+                        ? new ContractInfoDTO
+                        {
+                            ContractId = createdOrder.Contracts.First().ContractId,
+                            ContractDate = createdOrder.Contracts.First().ContractDate,
+                            FileUrl = createdOrder.Contracts.First().FileUrl
+                        }
+                        : new ContractInfoDTO()
+                };
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_CREATE_CODE,
+                    Message = "Đặt xe thành công. Vui lòng đến trạm với mã đơn hàng để nhận xe.",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi tạo đơn đặt xe: {ex.Message}",
+                    Data = new { error = ex.Message, innerError = ex.InnerException?.Message }
+                };
+            }
+        }
+
+        /// <summary>
+        /// Verify order code (for staff to confirm customer pickup)
+        /// </summary>
+        public async Task<IServiceResult> VerifyOrderCodeAsync(string orderCode)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetOrderByCodeAsync(orderCode);
+                
+                if (order == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy đơn hàng với mã này"
+                    };
+                }
+
+                // Check if deposit is paid
+                var depositPayment = order.Payments
+                    .FirstOrDefault(p => p.PaymentType == PaymentType.DEPOSIT && p.Status == "COMPLETED");
+
+                var response = new VerifyOrderCodeResponseDTO
+                {
+                    OrderId = order.OrderId,
+                    OrderCode = order.OrderCode,
+                    CustomerId = order.CustomerId,
+                    CustomerName = order.Customer.Username,
+                    CustomerEmail = order.Customer.Email,
+                    CustomerPhone = order.Customer.ContactNumber ?? "",
+                    VehicleId = order.VehicleId,
+                    VehicleLicensePlate = order.Vehicle.SerialNumber,
+                    VehicleModel = order.Vehicle.Model?.Name ?? "",
+                    StartTime = order.StartTime,
+                    EndTime = order.EndTime ?? DateTime.MinValue,
+                    TotalPrice = order.TotalPrice,
+                    DepositPaid = depositPayment?.Amount ?? 0,
+                    OrderStatus = order.Status.ToString(),
+                    IsDepositPaid = depositPayment != null,
+                    ContractId = order.Contracts.FirstOrDefault()?.ContractId ?? Guid.Empty,
+                    ContractFileUrl = order.Contracts.FirstOrDefault()?.FileUrl ?? ""
+                };
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_READ_CODE,
+                    Message = "Xác thực mã đơn hàng thành công",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi xác thực mã đơn hàng: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Confirm order by staff and transition to ONGOING status
+        /// </summary>
+        public async Task<IServiceResult> ConfirmOrderByStaffAsync(Guid orderId, Guid staffId)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetOrderByIdAsync(orderId);
+                
+                if (order == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy đơn hàng"
+                    };
+                }
+
+                if (order.Status != OrderStatus.CONFIRMED)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = $"Không thể xác nhận đơn hàng với trạng thái {order.Status}"
+                    };
+                }
+
+                // Check if deposit is paid
+                var depositPayment = order.Payments
+                    .FirstOrDefault(p => p.PaymentType == PaymentType.DEPOSIT && p.Status == "COMPLETED");
+
+                if (depositPayment == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Khách hàng chưa thanh toán tiền cọc"
+                    };
+                }
+
+                // Update order status and assign staff
+                order.Status = OrderStatus.ONGOING;
+                order.StaffId = staffId;
+                order.UpdatedAt = DateTime.Now;
+
+                await _unitOfWork.OrderRepository.UpdateOrderAsync(order);
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_UPDATE_CODE,
+                    Message = "Xác nhận đơn hàng thành công. Khách hàng có thể nhận xe.",
+                    Data = new
+                    {
+                        OrderId = order.OrderId,
+                        OrderCode = order.OrderCode,
+                        Status = order.Status.ToString(),
+                        StaffId = staffId
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi xác nhận đơn hàng: {ex.Message}"
+                };
+            }
+        }
     }
 }
