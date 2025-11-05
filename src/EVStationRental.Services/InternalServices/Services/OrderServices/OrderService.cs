@@ -64,10 +64,10 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 if (!isAvailable)
                 {
                 return new ServiceResult
-                {
-                    StatusCode = Const.ERROR_VALIDATION_CODE,
-                    Message = "Xe không khả dụng trong khoảng thời gian đã chọn"
-                };
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Xe không khả dụng trong khoảng thời gian đã chọn"
+                    };
                 }
 
                 // Get vehicle model to calculate price
@@ -81,10 +81,30 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     };
                 }
 
-                // Calculate total hours and price
+                // Generate unique 6-character order code
+                string orderCode;
+                int attempts = 0;
+                const int maxAttempts = 100;
+                
+                do
+                {
+                    orderCode = GenerateOrderCode();
+                    attempts++;
+                    
+                    if (attempts >= maxAttempts)
+                    {
+                        return new ServiceResult
+                        {
+                            StatusCode = Const.ERROR_EXCEPTION,
+                            Message = "Không thể tạo mã đơn hàng duy nhất. Vui lòng thử lại."
+                        };
+                    }
+                } while (await _unitOfWork.OrderRepository.GetOrderByCodeAsync(orderCode) != null);
+
+                // Calculate total hours and apply tiered pricing
                 var totalHours = (decimal)(request.EndTime - request.StartTime).TotalHours;
-                var originalPrice = totalHours * vehicleModel.PricePerHour;
-                var totalPrice = originalPrice;
+                var basePrice = CalculateTieredPrice(totalHours, vehicleModel.PricePerHour);
+                var totalPrice = basePrice;
                 decimal? discountAmount = null;
                 Guid? promotionId = null;
 
@@ -123,8 +143,8 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     }
 
                     // Apply discount
-                    discountAmount = originalPrice * (promotion.DiscountPercentage / 100);
-                    totalPrice = originalPrice - discountAmount.Value;
+                    discountAmount = basePrice * (promotion.DiscountPercentage / 100);
+                    totalPrice = basePrice - discountAmount.Value;
                     promotionId = promotion.PromotionId;
                 }
 
@@ -134,9 +154,12 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     OrderId = Guid.NewGuid(),
                     CustomerId = customerId,
                     VehicleId = request.VehicleId,
+                    OrderCode = orderCode, // Set unique order code
                     OrderDate = DateTime.Now,
                     StartTime = request.StartTime,
                     EndTime = request.EndTime,
+                    ReturnTime = null, // Set to null as requested
+                    BasePrice = basePrice,
                     TotalPrice = totalPrice,
                     PromotionId = promotionId,
                     Status = OrderStatus.PENDING,
@@ -155,8 +178,6 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderByIdAsync(createdOrder.OrderId);
                 
                 var response = orderWithDetails!.ToCreateOrderResponseDTO();
-                response.OriginalPrice = originalPrice;
-                response.DiscountAmount = discountAmount;
 
                 return new ServiceResult
                 {
@@ -184,6 +205,63 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
             }
         }
 
+        /// <summary>
+        /// Generate unique 6-character order code (uppercase letters and numbers)
+        /// </summary>
+        private string GenerateOrderCode()
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            var random = new Random();
+            var code = new char[6];
+            
+            for (int i = 0; i < 6; i++)
+            {
+                code[i] = chars[random.Next(chars.Length)];
+            }
+            
+            return new string(code);
+        }
+
+        /// <summary>
+        /// Calculate price with tiered discount: 5% off for every 12 hours
+        /// Formula: Each 12-hour block gets additional 5% discount
+        /// Example: 
+        /// - 0-12h: 100% price
+        /// - 12-24h: 95% price
+        /// - 24-36h: 90% price
+        /// - etc.
+        /// </summary>
+        private decimal CalculateTieredPrice(decimal totalHours, decimal pricePerHour)
+        {
+            if (totalHours <= 0)
+                return 0;
+
+            decimal totalPrice = 0;
+            decimal remainingHours = totalHours;
+            int tierLevel = 0;
+
+            while (remainingHours > 0)
+            {
+                // Calculate hours in this tier (max 12 hours per tier)
+                decimal hoursInTier = Math.Min(remainingHours, 12);
+                
+                // Calculate discount for this tier (5% per tier level)
+                decimal discountMultiplier = 1 - (tierLevel * 0.05m);
+                
+                // Minimum discount multiplier is 0.5 (50% off max)
+                discountMultiplier = Math.Max(discountMultiplier, 0.5m);
+                
+                // Add price for this tier
+                totalPrice += hoursInTier * pricePerHour * discountMultiplier;
+                
+                // Move to next tier
+                remainingHours -= hoursInTier;
+                tierLevel++;
+            }
+
+            return totalPrice;
+        }
+
         public async Task<IServiceResult> GetOrderByIdAsync(Guid orderId)
         {
             try
@@ -202,7 +280,47 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 {
                     StatusCode = Const.SUCCESS_READ_CODE,
                     Message = "Lấy thông tin đơn đặt xe thành công",
-                    Data = order.ToCreateOrderResponseDTO()
+                    Data = order.ToViewOrderDTO()
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi lấy thông tin đơn đặt xe: {ex.Message}"
+                };
+            }
+        }
+
+        public async Task<IServiceResult> GetOrderByOrderCodeAsync(string orderCode)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(orderCode))
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Mã đơn hàng không được để trống"
+                    };
+                }
+
+                var order = await _unitOfWork.OrderRepository.GetOrderByCodeAsync(orderCode);
+                if (order == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy đơn đặt xe với mã này"
+                    };
+                }
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_READ_CODE,
+                    Message = "Lấy thông tin đơn đặt xe thành công",
+                    Data = order.ToViewOrderDTO()
                 };
             }
             catch (Exception ex)
@@ -221,7 +339,7 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
             {
                 var orders = await _unitOfWork.OrderRepository.GetOrdersByCustomerIdAsync(customerId);
                 
-                var orderResponses = orders.Select(o => o.ToCreateOrderResponseDTO()).ToList();
+                var orderResponses = orders.Select(o => o.ToViewOrderDTO()).ToList();
 
                 return new ServiceResult
                 {
@@ -462,9 +580,9 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     };
                 }
 
-                // Calculate prices
+                // Calculate prices with tiered discount
                 var totalHours = (decimal)(request.EndTime - request.StartTime).TotalHours;
-                var basePrice = totalHours * vehicleModel.PricePerHour;
+                var basePrice = CalculateTieredPrice(totalHours, vehicleModel.PricePerHour);
                 var totalPrice = basePrice;
                 Guid? promotionId = null;
 
