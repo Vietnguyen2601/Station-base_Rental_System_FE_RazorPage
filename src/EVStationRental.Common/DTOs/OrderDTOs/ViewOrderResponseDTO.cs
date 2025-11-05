@@ -10,31 +10,20 @@ namespace EVStationRental.Common.DTOs.OrderDTOs
     public class ViewOrderResponseDTO
     {
         public Guid OrderId { get; set; }
-
+        public string OrderCode { get; set; } = string.Empty;
         public Guid CustomerId { get; set; }
-
         public Guid VehicleId { get; set; }
-
         public DateTime OrderDate { get; set; }
-
         public DateTime StartTime { get; set; }
-
         public DateTime? EndTime { get; set; }
-
+        public DateTime? ReturnTime { get; set; }
         public decimal BasePrice { get; set; }
-
         public decimal TotalPrice { get; set; }
-
         public Guid? PromotionId { get; set; }
-
         public Guid? StaffId { get; set; }
-
         public DateTime CreatedAt { get; set; }
-
         public DateTime? UpdatedAt { get; set; }
-
         public bool Isactive { get; set; }
-
         public OrderStatus Status { get; set; }
     }
 }

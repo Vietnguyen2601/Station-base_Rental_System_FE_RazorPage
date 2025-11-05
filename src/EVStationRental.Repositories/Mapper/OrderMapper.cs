@@ -11,31 +11,32 @@ namespace EVStationRental.Repositories.Mapper
             return new CreateOrderResponseDTO
             {
                 OrderId = order.OrderId,
+                OrderCode = order.OrderCode,
                 CustomerId = order.CustomerId,
                 VehicleId = order.VehicleId,
                 OrderDate = order.OrderDate,
                 StartTime = order.StartTime,
                 EndTime = order.EndTime ?? DateTime.Now,
-                TotalPrice = order.TotalPrice,
-                OriginalPrice = order.TotalPrice, // Will be calculated in service
-                DiscountAmount = null, // Will be calculated in service
-                PromotionCode = order.Promotion?.PromoCode,
+                ReturnTime = order.ReturnTime,
+                BasePrice = order.BasePrice,
                 Status = order.Status,
                 VehicleModelName = order.Vehicle?.Model?.Name ?? string.Empty,
                 PricePerHour = order.Vehicle?.Model?.PricePerHour ?? 0
             };
         }
 
-        public static ViewOrderResponseDTO  ToViewOrderDTO(this Order order)
+        public static ViewOrderResponseDTO ToViewOrderDTO(this Order order)
         {
             return new ViewOrderResponseDTO
             {
                 OrderId = order.OrderId,
+                OrderCode = order.OrderCode,
                 CustomerId = order.CustomerId,
                 VehicleId = order.VehicleId,
                 OrderDate = order.OrderDate,
                 StartTime = order.StartTime,
                 EndTime = order.EndTime,
+                ReturnTime = order.ReturnTime,
                 BasePrice = order.BasePrice,
                 TotalPrice = order.TotalPrice,
                 PromotionId = order.PromotionId,
@@ -44,7 +45,6 @@ namespace EVStationRental.Repositories.Mapper
                 UpdatedAt = order.UpdatedAt,
                 Isactive = order.Isactive,
                 Status = order.Status
-
             };
         }
     }

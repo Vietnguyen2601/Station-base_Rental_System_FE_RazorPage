@@ -9,6 +9,7 @@ namespace EVStationRental.Services.InternalServices.IServices.IOrderServices
     {
         Task<IServiceResult> CreateOrderAsync(Guid customerId, CreateOrderRequestDTO request);
         Task<IServiceResult> GetOrderByIdAsync(Guid orderId);
+        Task<IServiceResult> GetOrderByOrderCodeAsync(string orderCode);
         Task<IServiceResult> GetOrdersByCustomerIdAsync(Guid customerId);
         Task<IServiceResult> CancelOrderAsync(Guid orderId, Guid customerId);
         Task<IServiceResult> GetAllOrdersAsync();
