@@ -114,5 +114,32 @@ namespace EVStationRental.APIServices.Controllers
                 _ => StatusCode(500, result)
             };
         }
+
+        /// <summary>
+        /// Create VNPay payment URL by WalletId
+        /// Returns VNPay URL to redirect user for payment
+        /// </summary>
+        [HttpPost("create-vnpay-url")]
+        public async Task<IActionResult> CreateVNPayUrl([FromBody] CreateVNPayUrlByWalletDTO request)
+        {
+            // Get client IP address
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+
+            var result = await _walletService.CreateVNPayUrlByWalletIdAsync(
+                request.WalletId,
+                request.Amount,
+                request.ReturnUrl,
+                request.CancelUrl,
+                ipAddress
+            );
+
+            return result.StatusCode switch
+            {
+                201 => Created("", result),
+                400 => BadRequest(result),
+                404 => NotFound(result),
+                _ => StatusCode(500, result)
+            };
+        }
     }
 }

@@ -13,12 +13,22 @@ namespace EVStationRental.Common.DTOs.WalletDTOs
         public decimal Amount { get; set; }
 
         /// <summary>
-        /// Payment method: VNPAY, BANK_TRANSFER, CASH
+        /// Payment method: VNPAY, CASH
         /// </summary>
         [Required(ErrorMessage = "Phương thức thanh toán là bắt buộc")]
         public string PaymentMethod { get; set; } = null!;
 
         public string? Description { get; set; }
+
+        /// <summary>
+        /// VNPay return URL (FE will receive payment result here)
+        /// </summary>
+        public string? ReturnUrl { get; set; }
+
+        /// <summary>
+        /// VNPay cancel URL (when user cancels payment)
+        /// </summary>
+        public string? CancelUrl { get; set; }
     }
 
     /// <summary>
@@ -58,5 +68,28 @@ namespace EVStationRental.Common.DTOs.WalletDTOs
         public string Status { get; set; } = null!;
         public string? PaymentUrl { get; set; }  // For VNPay redirect
         public string Message { get; set; } = null!;
+    }
+
+    /// <summary>
+    /// DTO for creating VNPay URL by WalletId
+    /// </summary>
+    public class CreateVNPayUrlByWalletDTO
+    {
+        [Required(ErrorMessage = "WalletId là bắt buộc")]
+        public Guid WalletId { get; set; }
+
+        [Required(ErrorMessage = "Số tiền nạp là bắt buộc")]
+        [Range(10000, 50000000, ErrorMessage = "Số tiền nạp phải từ 10,000 đến 50,000,000 VNĐ")]
+        public decimal Amount { get; set; }
+
+        /// <summary>
+        /// VNPay return URL (FE will receive payment result here)
+        /// </summary>
+        public string? ReturnUrl { get; set; }
+
+        /// <summary>
+        /// VNPay cancel URL (when user cancels payment)
+        /// </summary>
+        public string? CancelUrl { get; set; }
     }
 }
