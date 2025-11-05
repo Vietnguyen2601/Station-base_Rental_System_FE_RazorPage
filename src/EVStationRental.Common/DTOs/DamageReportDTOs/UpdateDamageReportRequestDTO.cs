@@ -1,0 +1,20 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace EVStationRental.Common.DTOs.DamageReportDTOs
+{
+    public class UpdateDamageReportRequestDTO
+    {
+
+        public string Description { get; set; } = null!;
+
+        public decimal EstimatedCost { get; set; }
+
+        public string? Img { get; set; }
+
+
+    }
+}
