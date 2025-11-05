@@ -62,7 +62,6 @@ namespace EVStationRental.APIServices.Controllers
         {
             var result = await _damageReportService.SoftDeleteDamageReportAsync(id);
             return StatusCode((int)result.StatusCode, new { Message = result.Message, Data = result.Data });
-            //s
         }
 
         [HttpDelete("hardDelete/{id}")]
