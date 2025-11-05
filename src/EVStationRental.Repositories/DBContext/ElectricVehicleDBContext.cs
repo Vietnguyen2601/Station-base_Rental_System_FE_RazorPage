@@ -342,6 +342,9 @@ public partial class ElectricVehicleDBContext : DbContext
             entity.Property(e => e.PaymentMethod)
                 .HasColumnType("character varying")
                 .HasColumnName("payment_method");
+            entity.Property(e => e.PaymentType)
+                .HasColumnName("payment_type")
+                .HasConversion<string>(); // ✅ ADD THIS - Map enum to string for PostgreSQL
             entity.Property(e => e.Status)
                 .HasColumnType("character varying")
                 .HasColumnName("status");

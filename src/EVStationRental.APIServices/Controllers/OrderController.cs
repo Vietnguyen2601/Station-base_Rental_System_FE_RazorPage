@@ -86,6 +86,24 @@ namespace EVStationRental.APIServices.Controllers
         }
 
         /// <summary>
+        /// Lấy thông tin đơn đặt xe theo OrderCode (Chỉ dành cho nhân viên)
+        /// </summary>
+        [HttpGet("code/{orderCode}")]
+        [Authorize(Roles = "Staff")]
+        public async Task<IActionResult> GetOrderByCode(string orderCode)
+        {
+            var result = await _orderService.GetOrderByOrderCodeAsync(orderCode);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
+                404 => NotFound(result),
+                400 => BadRequest(result),
+                _ => StatusCode(500, result)
+            };
+        }
+
+        /// <summary>
         /// Lấy danh sách đơn đặt xe của khách hàng hiện tại
         /// </summary>
         [HttpGet("my-orders")]
@@ -184,7 +202,7 @@ namespace EVStationRental.APIServices.Controllers
         /// Xác thực mã đơn hàng 6 ký tự (Dành cho nhân viên khi khách đến nhận xe)
         /// </summary>
         [HttpPost("verify-code")]
-        [Authorize(Roles = "STAFF,ADMIN")]
+        [Authorize(Roles = "Staff")]
         public async Task<IActionResult> VerifyOrderCode([FromBody] VerifyOrderCodeDTO request)
         {
             var result = await _orderService.VerifyOrderCodeAsync(request.OrderCode);

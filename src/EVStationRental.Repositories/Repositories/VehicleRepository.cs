@@ -88,7 +88,12 @@ namespace EVStationRental.Repositories.Repositories
 
         public async Task<List<Vehicle>> GetActiveVehiclesAsync()
         {
-            return await _context.Set<Vehicle>().Where(v => v.Isactive).ToListAsync();
+            return await _context.Set<Vehicle>()
+                .Include(v => v.Model)
+                    .ThenInclude(m => m.Type)
+                .Include(v => v.Station)
+                .Include(v => v.Orders)
+                .ToListAsync();
         }
 
         public async Task<List<Vehicle>> GetInactiveVehiclesAsync()
