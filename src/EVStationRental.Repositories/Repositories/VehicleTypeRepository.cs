@@ -60,6 +60,14 @@ namespace EVStationRental.Repositories.Repositories
             _context.Set<VehicleType>().Update(vehicleType);
             await _context.SaveChangesAsync();
             return true;
+
+
+            //var vehicle = await GetVehicleByIdAsync(vehicleId);
+            //if (vehicle == null) return false;
+            //vehicle.Isactive = false;
+            //_context.Set<Vehicle>().Update(vehicle);
+            //await _context.SaveChangesAsync();
+            //return true;
         }
 
         public async Task<VehicleType?> UpdateVehicleTypeAsync(VehicleType vehicleType)
