@@ -13,5 +13,6 @@ namespace EVStationRental.Repositories.IRepositories
         Task<Wallet?> UpdateWalletAsync(Wallet wallet);
         Task<List<WalletTransaction>> GetTransactionHistoryAsync(Guid walletId, int pageNumber = 1, int pageSize = 20);
         Task<WalletTransaction> CreateTransactionAsync(WalletTransaction transaction);
+        Task<WalletTransaction?> GetTransactionByIdAsync(Guid transactionId);
     }
 }

@@ -136,7 +136,8 @@ namespace EVStationRental.APIServices.Controllers
 
             return result.StatusCode switch
             {
-                201 => Created("", result),
+                200 => Ok(result),
+                201 => Ok(result),
                 400 => BadRequest(result),
                 404 => NotFound(result),
                 _ => StatusCode(500, result)

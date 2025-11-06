@@ -74,5 +74,13 @@ namespace EVStationRental.Repositories.Repositories
             await _context.SaveChangesAsync();
             return transaction;
         }
+
+        public async Task<WalletTransaction?> GetTransactionByIdAsync(Guid transactionId)
+        {
+            return await _context.WalletTransactions
+                .Include(t => t.Wallet)
+                .Include(t => t.Order)
+                .FirstOrDefaultAsync(t => t.TransactionId == transactionId && t.Isactive);
+        }
     }
 }
