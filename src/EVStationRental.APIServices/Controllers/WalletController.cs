@@ -1,3 +1,4 @@
+using EVStationRental.Common.DTOs.PaymentDTOs;
 using EVStationRental.Common.DTOs.WalletDTOs;
 using EVStationRental.Services.InternalServices.IServices.IWalletServices;
 using Microsoft.AspNetCore.Authorization;
@@ -136,6 +137,27 @@ namespace EVStationRental.APIServices.Controllers
             return result.StatusCode switch
             {
                 201 => Created("", result),
+                400 => BadRequest(result),
+                404 => NotFound(result),
+                _ => StatusCode(500, result)
+            };
+        }
+
+        /// <summary>
+        /// VNPay callback endpoint for FE to call after receiving return URL
+        /// FE receives VNPay redirect with query params, then calls this API
+        /// Example: POST /api/Wallet/vnpay-callback
+        /// Body: All VNPay query parameters (vnp_Amount, vnp_BankCode, etc.)
+        /// </summary>
+        [HttpPost("vnpay-callback")]
+        [AllowAnonymous]
+        public async Task<IActionResult> VNPayCallback([FromBody] VNPayReturnDTO callback)
+        {
+            var result = await _walletService.HandleVNPayWalletReturnAsync(callback);
+
+            return result.StatusCode switch
+            {
+                200 => Ok(result),
                 400 => BadRequest(result),
                 404 => NotFound(result),
                 _ => StatusCode(500, result)
