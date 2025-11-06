@@ -667,8 +667,7 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasColumnName("isactive");
             entity.Property(e => e.OrderId).HasColumnName("order_id");
             entity.Property(e => e.TransactionType)
-                .HasColumnName("transaction_type")
-                .HasConversion<string>();
+                .HasColumnName("transaction_type");
             entity.Property(e => e.WalletId).HasColumnName("wallet_id");
 
             entity.HasOne(d => d.Order).WithMany(p => p.WalletTransactions)
