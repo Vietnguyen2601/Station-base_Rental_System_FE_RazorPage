@@ -343,8 +343,7 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasColumnType("character varying")
                 .HasColumnName("payment_method");
             entity.Property(e => e.PaymentType)
-                .HasColumnName("payment_type")
-                .HasConversion<string>(); // ✅ ADD THIS - Map enum to string for PostgreSQL
+                .HasColumnName("payment_type");
             entity.Property(e => e.Status)
                 .HasColumnType("character varying")
                 .HasColumnName("status");
@@ -668,7 +667,8 @@ public partial class ElectricVehicleDBContext : DbContext
                 .HasColumnName("isactive");
             entity.Property(e => e.OrderId).HasColumnName("order_id");
             entity.Property(e => e.TransactionType)
-                .HasColumnName("transaction_type");
+                .HasColumnName("transaction_type")
+                .HasConversion<string>();
             entity.Property(e => e.WalletId).HasColumnName("wallet_id");
 
             entity.HasOne(d => d.Order).WithMany(p => p.WalletTransactions)
