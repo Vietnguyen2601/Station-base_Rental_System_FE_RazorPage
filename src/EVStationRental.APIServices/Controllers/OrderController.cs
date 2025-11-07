@@ -219,7 +219,7 @@ namespace EVStationRental.APIServices.Controllers
         /// Xác nhận đơn hàng và chuyển sang trạng thái ONGOING (Nhân viên xác nhận sau khi kiểm tra)
         /// </summary>
         [HttpPut("{orderId}/confirm")]
-        [Authorize(Roles = "STAFF,ADMIN")]
+        [Authorize(Roles = "Staff, Admin")]
         public async Task<IActionResult> ConfirmOrderByStaff(Guid orderId)
         {
             var staffIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);

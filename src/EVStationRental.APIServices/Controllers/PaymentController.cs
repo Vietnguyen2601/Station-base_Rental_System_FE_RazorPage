@@ -52,7 +52,6 @@ namespace EVStationRental.APIServices.Controllers
         /// <param name="request">Contains orderId and actualReturnDate</param>
         /// <returns>Payment completion result with updated balances</returns>
         [HttpPost("finalize-return")]
-        [Authorize(Roles = "STAFF,ADMIN")]
         public async Task<IActionResult> FinalizeReturnPayment([FromBody] FinalizeReturnPaymentDTO request)
         {
             var result = await _paymentService.FinalizeReturnPaymentAsync(request);

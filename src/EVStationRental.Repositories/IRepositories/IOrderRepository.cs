@@ -16,8 +16,6 @@ namespace EVStationRental.Repositories.IRepositories
         Task<List<Order>> GetActiveOrdersAsync();
         Task<List<Order>> GetOrdersByVehicleIdAsync(Guid vehicleId);
         Task<List<Order>> GetAllOrdersAsync();
-
-        // New methods for wallet-based order flow with stored procedures
         Task<Guid> CreateOrderWithDepositUsingWalletAsync(
             Guid customerId,
             Guid vehicleId,
