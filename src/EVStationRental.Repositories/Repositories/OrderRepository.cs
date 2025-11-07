@@ -234,15 +234,15 @@ namespace EVStationRental.Repositories.Repositories
                     wallet.UpdatedAt = DateTime.Now;
                     await _context.SaveChangesAsync();
 
-                    // Log wallet transaction
+                    // Log wallet transaction (negative amount for deduction)
                     var walletTransaction = new WalletTransaction
                     {
                         TransactionId = Guid.NewGuid(),
                         WalletId = wallet.WalletId,
                         OrderId = order.OrderId,
-                        Amount = depositAmount,
-                        TransactionType = TransactionType.DEPOSIT,
-                        Description = $"Deposit for order {order.OrderCode}",
+                        Amount = -depositAmount, // Negative amount to indicate deduction
+                        TransactionType = TransactionType.DEPOSIT, // Use DEPOSIT for deposit-related transactions
+                        Description = $"Deposit deduction for order {order.OrderCode}",
                         CreatedAt = DateTime.Now,
                         Isactive = true
                     };
