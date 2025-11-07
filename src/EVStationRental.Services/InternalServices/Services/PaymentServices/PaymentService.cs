@@ -684,12 +684,12 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
         /// <summary>
         /// Finalize return payment when customer returns vehicle
         /// </summary>
-        public async Task<IServiceResult> FinalizeReturnPaymentAsync(FinalizeReturnPaymentDTO request, Guid customerId)
+        public async Task<IServiceResult> FinalizeReturnPaymentAsync(FinalizeReturnPaymentDTO request)
         {
             try
             {
                 // Find the ongoing order for the customer
-                var orders = await _unitOfWork.OrderRepository.GetOrdersByCustomerIdAsync(customerId);
+                var orders = await _unitOfWork.OrderRepository.GetOrdersByCustomerIdAsync(request.AccountId);
                 var order = orders?.FirstOrDefault(o => o.Status == OrderStatus.ONGOING);
                 
                 if (order == null)
@@ -726,7 +726,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 if (request.FinalPaymentMethod.ToUpper() == "WALLET" && amountToDeduct > 0)
                 {
                     // Get customer wallet
-                    var wallet = await _unitOfWork.WalletRepository.GetByAccountIdAsync(order.CustomerId);
+                    var wallet = await _unitOfWork.WalletRepository.GetByAccountIdAsync(request.AccountId);
                     if (wallet == null)
                     {
                         return new ServiceResult
@@ -796,14 +796,10 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
 
                 var response = new FinalizeReturnPaymentResponseDTO
                 {
-                    OrderId = order.OrderId,
-                    OrderCode = order.OrderCode,
-                    TotalPrice = amountToDeduct, // Amount processed
-                    DepositPaid = 0, // Not calculating deposit here
-                    FinalAmountDue = amountToDeduct,
+                    AccountId = request.AccountId,
+                    AmountDeducted = amountToDeduct,
                     PaymentMethod = request.FinalPaymentMethod,
                     PaymentStatus = "COMPLETED",
-                    OrderStatus = order.Status.ToString(),
                     CompletedAt = DateTime.Now,
                     Message = $"Đã trừ {amountToDeduct:N0} VNĐ từ ví thành công"
                 };
@@ -817,7 +813,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error finalizing return payment for customer {CustomerId}", customerId);
+                _logger.LogError(ex, "Error finalizing return payment for customer {AccountId}", request.AccountId);
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_EXCEPTION,

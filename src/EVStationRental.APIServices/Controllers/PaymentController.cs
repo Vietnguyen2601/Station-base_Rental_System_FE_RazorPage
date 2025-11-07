@@ -53,22 +53,9 @@ namespace EVStationRental.APIServices.Controllers
         /// <param name="request">Contains orderId and actualReturnDate</param>
         /// <returns>Payment completion result with updated balances</returns>
         [HttpPost("finalize-return")]
-        [Authorize]
         public async Task<IActionResult> FinalizeReturnPayment([FromBody] FinalizeReturnPaymentDTO request)
         {
-            // Get CustomerId from JWT token
-            var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (customerIdClaim == null)
-            {
-                return Unauthorized("Token không hợp lệ");
-            }
-
-            if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
-            {
-                return BadRequest("CustomerId không hợp lệ");
-            }
-
-            var result = await _paymentService.FinalizeReturnPaymentAsync(request, customerId);
+            var result = await _paymentService.FinalizeReturnPaymentAsync(request);
 
             return result.StatusCode switch
             {
