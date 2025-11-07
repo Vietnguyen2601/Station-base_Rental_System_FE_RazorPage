@@ -142,9 +142,9 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                         };
                     }
 
-                    // Apply discount
-                    discountAmount = basePrice * (promotion.DiscountPercentage / 100);
-                    totalPrice = basePrice - discountAmount.Value;
+                    // Apply discount - làm tròn kết quả
+                    discountAmount = Math.Round(basePrice * (promotion.DiscountPercentage / 100), 0);
+                    totalPrice = Math.Round(basePrice - discountAmount.Value, 0);
                     promotionId = promotion.PromotionId;
                 }
 
@@ -259,7 +259,8 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 tierLevel++;
             }
 
-            return totalPrice;
+            // Làm tròn kết quả về số nguyên
+            return Math.Round(totalPrice, 0);
         }
 
         public async Task<IServiceResult> GetOrderByIdAsync(Guid orderId)
@@ -609,12 +610,12 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                         };
                     }
 
-                    totalPrice = basePrice * (1 - promotion.DiscountPercentage / 100);
+                    totalPrice = Math.Round(basePrice * (1 - promotion.DiscountPercentage / 100), 0);
                     promotionId = promotion.PromotionId;
                 }
 
-                // Calculate deposit (10% of base price)
-                var depositAmount = basePrice * 0.10m;
+                // Calculate deposit (10% of base price) - làm tròn
+                var depositAmount = Math.Round(basePrice * 0.10m, 0);
 
                 // Call stored procedure to create order with deposit
                 var orderId = await _unitOfWork.OrderRepository.CreateOrderWithDepositUsingWalletAsync(
