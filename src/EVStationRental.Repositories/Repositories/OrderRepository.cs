@@ -64,6 +64,7 @@ namespace EVStationRental.Repositories.Repositories
             }
 
             existingOrder.EndTime = order.EndTime;
+            existingOrder.ReturnTime = order.ReturnTime;
             existingOrder.TotalPrice = order.TotalPrice;
             existingOrder.PromotionId = order.PromotionId;
             existingOrder.StaffId = order.StaffId;

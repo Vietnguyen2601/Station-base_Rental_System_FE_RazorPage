@@ -821,5 +821,79 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 };
             }
         }
+
+        /// <summary>
+        /// Cập nhật ReturnTime khi khách hàng trả xe
+        /// - Set ReturnTime = thời gian hiện tại
+        /// - Chuyển Order status thành COMPLETED
+        /// - Chuyển Vehicle status thành AVAILABLE
+        /// </summary>
+        public async Task<IServiceResult> UpdateReturnTimeAsync(Guid orderId)
+        {
+            try
+            {
+                var order = await _unitOfWork.OrderRepository.GetOrderByIdAsync(orderId);
+                
+                if (order == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy đơn hàng"
+                    };
+                }
+
+                // Chỉ cho phép update return time cho order đang ONGOING
+                if (order.Status != OrderStatus.ONGOING)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = $"Không thể cập nhật thời gian trả xe cho đơn hàng có trạng thái {order.Status}. Đơn hàng phải ở trạng thái ONGOING."
+                    };
+                }
+
+                // Set return time to current time
+                order.ReturnTime = DateTime.Now;
+                order.Status = OrderStatus.COMPLETED;
+                order.UpdatedAt = DateTime.Now;
+
+                await _unitOfWork.OrderRepository.UpdateOrderAsync(order);
+
+                // Update vehicle status to AVAILABLE
+                var vehicle = await _unitOfWork.VehicleRepository.GetVehicleByIdAsync(order.VehicleId);
+                if (vehicle != null)
+                {
+                    vehicle.Status = VehicleStatus.AVAILABLE;
+                    vehicle.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.VehicleRepository.UpdateVehicleAsync(vehicle);
+                }
+
+                var response = new UpdateReturnTimeResponseDTO
+                {
+                    OrderId = order.OrderId,
+                    OrderCode = order.OrderCode,
+                    ReturnTime = order.ReturnTime.Value,
+                    OrderStatus = order.Status.ToString(),
+                    VehicleStatus = vehicle?.Status.ToString() ?? "UNKNOWN",
+                    Message = "Cập nhật thời gian trả xe thành công"
+                };
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_UPDATE_CODE,
+                    Message = "Cập nhật thời gian trả xe thành công",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi cập nhật thời gian trả xe: {ex.Message}"
+                };
+            }
+        }
     }
 }
