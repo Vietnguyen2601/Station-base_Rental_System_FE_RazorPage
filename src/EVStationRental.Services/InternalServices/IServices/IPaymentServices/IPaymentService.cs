@@ -31,6 +31,6 @@ namespace EVStationRental.Services.InternalServices.IServices.IPaymentServices
         Task<decimal> CalculateFinalPriceAsync(Guid orderId);
 
         // New wallet-based payment flow
-        Task<IServiceResult> FinalizeReturnPaymentAsync(FinalizeReturnPaymentDTO request, Guid customerId);
+        Task<IServiceResult> FinalizeReturnPaymentAsync(FinalizeReturnPaymentDTO request);
     }
 }
