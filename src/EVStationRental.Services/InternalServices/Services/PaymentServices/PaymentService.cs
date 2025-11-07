@@ -587,8 +587,8 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 throw new ArgumentException($"Order with ID {orderId} not found");
             }
 
-            // deposit_price = 10% của base_price
-            decimal depositPrice = order.BasePrice * 0.10m;
+            // deposit_price = 10% của base_price - làm tròn về số nguyên
+            decimal depositPrice = Math.Round(order.BasePrice * 0.10m, 0);
 
             _logger.LogInformation("Deposit price calculated for Order {OrderId}: {DepositPrice}", 
                 orderId, depositPrice);
@@ -597,8 +597,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
         }
 
         /// <summary>
-        /// Tính tổng giá (Total Price) = base_price - promotion_price(if any)
-        /// Không tính extra_charge như yêu cầu
+        /// Tính tổng giá (Total Price) = base_price - promotion_price(if any) + damage_cost(if any)
         /// </summary>
         public async Task<decimal> CalculateTotalPriceAsync(Guid orderId)
         {
@@ -610,6 +609,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
 
             decimal basePrice = order.BasePrice;
             decimal promotionPrice = 0m;
+            decimal damageCost = 0m;
 
             // Áp dụng promotion nếu có
             if (order.PromotionId.HasValue)
@@ -617,22 +617,29 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 var promotion = await _unitOfWork.PromotionRepository.GetByIdAsync(order.PromotionId.Value);
                 if (promotion != null && promotion.Isactive)
                 {
-                    promotionPrice = basePrice * (promotion.DiscountPercentage / 100);
+                    promotionPrice = Math.Round(basePrice * (promotion.DiscountPercentage / 100), 0);
                 }
             }
 
-            // Total = base_price - promotion_price(if any)
-            decimal totalPrice = basePrice - promotionPrice;
+            // Lấy damage cost nếu có damage report cho order này
+            var damageReports = await _unitOfWork.DamageReportRepository.GetAllDamageReportsAsync();
+            var orderDamageReport = damageReports.FirstOrDefault(dr => dr.OrderId == orderId && dr.Isactive);
+            if (orderDamageReport != null)
+            {
+                damageCost = orderDamageReport.EstimatedCost;
+            }
 
-            _logger.LogInformation("Total price calculated for Order {OrderId}: {TotalPrice} (Base: {BasePrice}, Promotion: {PromotionPrice})", 
-                orderId, totalPrice, basePrice, promotionPrice);
+            // Total = base_price - promotion_price(if any) + damage_cost(if any) - làm tròn
+            decimal totalPrice = Math.Round(basePrice - promotionPrice + damageCost, 0);
+
+            _logger.LogInformation("Total price calculated for Order {OrderId}: {TotalPrice} (Base: {BasePrice}, Promotion: {PromotionPrice}, Damage: {DamageCost})", 
+                orderId, totalPrice, basePrice, promotionPrice, damageCost);
 
             return totalPrice;
         }
 
         /// <summary>
-        /// Tính giá cuối cùng (Final Price) = base_price - deposit_price - promotion_price(if any)
-        /// Không tính extra_charge như yêu cầu
+        /// Tính giá cuối cùng (Final Price) = base_price - deposit_price - promotion_price(if any) + damage_cost(if any)
         /// </summary>
         public async Task<decimal> CalculateFinalPriceAsync(Guid orderId)
         {
@@ -643,8 +650,9 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
             }
 
             decimal basePrice = order.BasePrice;
-            decimal depositPrice = basePrice * 0.10m; // 10% deposit
+            decimal depositPrice = Math.Round(basePrice * 0.10m, 0); // 10% deposit - làm tròn
             decimal promotionPrice = 0m;
+            decimal damageCost = 0m;
 
             // Áp dụng promotion nếu có
             if (order.PromotionId.HasValue)
@@ -652,15 +660,23 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 var promotion = await _unitOfWork.PromotionRepository.GetByIdAsync(order.PromotionId.Value);
                 if (promotion != null && promotion.Isactive)
                 {
-                    promotionPrice = basePrice * (promotion.DiscountPercentage / 100);
+                    promotionPrice = Math.Round(basePrice * (promotion.DiscountPercentage / 100), 0);
                 }
             }
 
-            // Final = base_price - deposit_price - promotion_price(if any)
-            decimal finalPrice = basePrice - depositPrice - promotionPrice;
+            // Lấy damage cost nếu có damage report cho order này
+            var damageReports = await _unitOfWork.DamageReportRepository.GetAllDamageReportsAsync();
+            var orderDamageReport = damageReports.FirstOrDefault(dr => dr.OrderId == orderId && dr.Isactive);
+            if (orderDamageReport != null)
+            {
+                damageCost = orderDamageReport.EstimatedCost;
+            }
 
-            _logger.LogInformation("Final price calculated for Order {OrderId}: {FinalPrice} (Base: {BasePrice}, Deposit: {DepositPrice}, Promotion: {PromotionPrice})", 
-                orderId, finalPrice, basePrice, depositPrice, promotionPrice);
+            // Final = base_price - deposit_price - promotion_price(if any) + damage_cost(if any) - làm tròn
+            decimal finalPrice = Math.Round(basePrice - depositPrice - promotionPrice + damageCost, 0);
+
+            _logger.LogInformation("Final price calculated for Order {OrderId}: {FinalPrice} (Base: {BasePrice}, Deposit: {DepositPrice}, Promotion: {PromotionPrice}, Damage: {DamageCost})", 
+                orderId, finalPrice, basePrice, depositPrice, promotionPrice, damageCost);
 
             return finalPrice;
         }
