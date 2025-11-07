@@ -33,8 +33,6 @@ using System.Security.Claims;
 using System.Text;
 using EVStationRental.Services.InternalServices.IServices.IFeedbackServices;
 using EVStationRental.Services.InternalServices.Services.FeedbackServices;
-using EVStationRental.Services.InternalServices.IServices.IDamageReportServices;
-using EVStationRental.Services.InternalServices.Services.DamageReportServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,9 +84,6 @@ builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 //feedback
 builder.Services.AddScoped<IFeedbackRepository, FeedbackRepository>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
-//Damge Report
-builder.Services.AddScoped<IDamageReportService, DamageReportService>();
-builder.Services.AddScoped<IDamageReportRepository, DamageReportRepository>();
 //payment
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
