@@ -43,6 +43,140 @@ namespace EVStationRental.APIServices.Controllers
         }
 
         /// <summary>
+        /// Tính giá cuối cùng (Final Price) cho đơn hàng
+        /// Calculate final price for an order
+        /// Formula: base_price - deposit_price - promotion_price + damage_cost
+        /// </summary>
+        /// <param name="orderId">Order ID</param>
+        /// <returns>Final price calculation result</returns>
+        [HttpGet("calculate-final-price/{orderId}")]
+        [Authorize]
+        public async Task<IActionResult> CalculateFinalPrice(Guid orderId)
+        {
+            try
+            {
+                var finalPrice = await _paymentService.CalculateFinalPriceAsync(orderId);
+
+                return Ok(new
+                {
+                    StatusCode = 200,
+                    Message = "Tính giá cuối cùng thành công",
+                    Data = new
+                    {
+                        OrderId = orderId,
+                        FinalPrice = finalPrice,
+                        Currency = "VND"
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new
+                {
+                    StatusCode = 404,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    StatusCode = 500,
+                    Message = $"Lỗi khi tính giá cuối cùng: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Tính tiền cọc (Deposit Price) cho đơn hàng
+        /// Calculate deposit price for an order (10% of base price)
+        /// </summary>
+        /// <param name="orderId">Order ID</param>
+        /// <returns>Deposit price calculation result</returns>
+        [HttpGet("calculate-deposit-price/{orderId}")]
+        [Authorize]
+        public async Task<IActionResult> CalculateDepositPrice(Guid orderId)
+        {
+            try
+            {
+                var depositPrice = await _paymentService.CalculateDepositPriceAsync(orderId);
+
+                return Ok(new
+                {
+                    StatusCode = 200,
+                    Message = "Tính tiền cọc thành công",
+                    Data = new
+                    {
+                        OrderId = orderId,
+                        DepositPrice = depositPrice,
+                        Currency = "VND"
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new
+                {
+                    StatusCode = 404,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    StatusCode = 500,
+                    Message = $"Lỗi khi tính tiền cọc: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Tính tổng giá (Total Price) cho đơn hàng
+        /// Calculate total price for an order
+        /// Formula: base_price - promotion_price + damage_cost
+        /// </summary>
+        /// <param name="orderId">Order ID</param>
+        /// <returns>Total price calculation result</returns>
+        [HttpGet("calculate-total-price/{orderId}")]
+        [Authorize]
+        public async Task<IActionResult> CalculateTotalPrice(Guid orderId)
+        {
+            try
+            {
+                var totalPrice = await _paymentService.CalculateTotalPriceAsync(orderId);
+
+                return Ok(new
+                {
+                    StatusCode = 200,
+                    Message = "Tính tổng giá thành công",
+                    Data = new
+                    {
+                        OrderId = orderId,
+                        TotalPrice = totalPrice,
+                        Currency = "VND"
+                    }
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new
+                {
+                    StatusCode = 404,
+                    Message = ex.Message
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    StatusCode = 500,
+                    Message = $"Lỗi khi tính tổng giá: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
         /// Hoàn tất thanh toán khi trả xe (WALLET-BASED FLOW)
         /// Staff calls this endpoint when customer returns the vehicle
         /// - Deducts remaining amount from wallet
