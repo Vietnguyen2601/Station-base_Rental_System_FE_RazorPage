@@ -8,24 +8,18 @@ namespace EVStationRental.Common.DTOs.PaymentDTOs
     /// </summary>
     public class FinalizeReturnPaymentDTO
     {
-        [Required(ErrorMessage = "OrderId là bắt buộc")]
-        public Guid OrderId { get; set; }
+        /// <summary>
+        /// Amount to deduct from user's wallet
+        /// </summary>
+        [Required(ErrorMessage = "Số tiền là bắt buộc")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Số tiền phải lớn hơn 0")]
+        public decimal Amount { get; set; }
 
         /// <summary>
         /// Payment method for final payment: "WALLET", "CASH", "VNPAY", etc.
         /// </summary>
         [Required(ErrorMessage = "Phương thức thanh toán là bắt buộc")]
         public string FinalPaymentMethod { get; set; } = "WALLET";
-
-        /// <summary>
-        /// Optional: Extra charges for damages, late return, etc.
-        /// </summary>
-        public decimal? ExtraCharges { get; set; }
-
-        /// <summary>
-        /// Description for extra charges
-        /// </summary>
-        public string? ExtraChargesDescription { get; set; }
     }
 
     /// <summary>
@@ -37,7 +31,6 @@ namespace EVStationRental.Common.DTOs.PaymentDTOs
         public string OrderCode { get; set; } = null!;
         public decimal TotalPrice { get; set; }
         public decimal DepositPaid { get; set; }
-        public decimal ExtraCharges { get; set; }
         public decimal FinalAmountDue { get; set; }  // Amount customer needs to pay (or receive if negative = refund)
         public string PaymentMethod { get; set; } = null!;
         public string PaymentStatus { get; set; } = null!;

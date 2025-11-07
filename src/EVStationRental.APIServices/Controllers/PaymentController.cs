@@ -3,6 +3,7 @@ using EVStationRental.Services.InternalServices.IServices.IPaymentServices;
 using EVStationRental.Services.InternalServices.IServices.IWalletServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace EVStationRental.APIServices.Controllers
 {
@@ -52,9 +53,22 @@ namespace EVStationRental.APIServices.Controllers
         /// <param name="request">Contains orderId and actualReturnDate</param>
         /// <returns>Payment completion result with updated balances</returns>
         [HttpPost("finalize-return")]
+        [Authorize]
         public async Task<IActionResult> FinalizeReturnPayment([FromBody] FinalizeReturnPaymentDTO request)
         {
-            var result = await _paymentService.FinalizeReturnPaymentAsync(request);
+            // Get CustomerId from JWT token
+            var customerIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (customerIdClaim == null)
+            {
+                return Unauthorized("Token không hợp lệ");
+            }
+
+            if (!Guid.TryParse(customerIdClaim.Value, out var customerId))
+            {
+                return BadRequest("CustomerId không hợp lệ");
+            }
+
+            var result = await _paymentService.FinalizeReturnPaymentAsync(request, customerId);
 
             return result.StatusCode switch
             {
