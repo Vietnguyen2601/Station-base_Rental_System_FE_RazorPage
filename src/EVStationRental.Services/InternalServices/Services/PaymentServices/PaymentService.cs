@@ -684,17 +684,20 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
         /// <summary>
         /// Finalize return payment when customer returns vehicle
         /// </summary>
-        public async Task<IServiceResult> FinalizeReturnPaymentAsync(FinalizeReturnPaymentDTO request)
+        public async Task<IServiceResult> FinalizeReturnPaymentAsync(FinalizeReturnPaymentDTO request, Guid customerId)
         {
             try
             {
-                var order = await _unitOfWork.OrderRepository.GetOrderByIdAsync(request.OrderId);
+                // Find the ongoing order for the customer
+                var orders = await _unitOfWork.OrderRepository.GetOrdersByCustomerIdAsync(customerId);
+                var order = orders?.FirstOrDefault(o => o.Status == OrderStatus.ONGOING);
+                
                 if (order == null)
                 {
                     return new ServiceResult
                     {
                         StatusCode = Const.WARNING_NO_DATA_CODE,
-                        Message = "Không tìm thấy đơn hàng"
+                        Message = "Không tìm thấy đơn hàng đang thuê của khách hàng"
                     };
                 }
 
@@ -716,43 +719,93 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     };
                 }
 
-                // Add extra charges if any
-                if (request.ExtraCharges.HasValue && request.ExtraCharges.Value > 0)
+                // Use the amount provided in the request
+                var amountToDeduct = request.Amount;
+
+                // Handle payment if using WALLET
+                if (request.FinalPaymentMethod.ToUpper() == "WALLET" && amountToDeduct > 0)
                 {
-                    order.TotalPrice += request.ExtraCharges.Value;
-                    order.UpdatedAt = DateTime.Now;
-                    await _unitOfWork.OrderRepository.UpdateOrderAsync(order);
+                    // Get customer wallet
+                    var wallet = await _unitOfWork.WalletRepository.GetByAccountIdAsync(order.CustomerId);
+                    if (wallet == null)
+                    {
+                        return new ServiceResult
+                        {
+                            StatusCode = Const.WARNING_NO_DATA_CODE,
+                            Message = "Không tìm thấy ví của khách hàng"
+                        };
+                    }
+
+                    if (wallet.Balance < amountToDeduct)
+                    {
+                        return new ServiceResult
+                        {
+                            StatusCode = Const.ERROR_VALIDATION_CODE,
+                            Message = $"Số dư ví không đủ. Cần: {amountToDeduct:N0} VNĐ, Có: {wallet.Balance:N0} VNĐ"
+                        };
+                    }
+
+                    // Deduct from wallet
+                    wallet.Balance -= amountToDeduct;
+                    wallet.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.WalletRepository.UpdateWalletAsync(wallet);
+
+                    // Create wallet transaction
+                    var walletTransaction = new WalletTransaction
+                    {
+                        TransactionId = Guid.NewGuid(),
+                        WalletId = wallet.WalletId,
+                        OrderId = order.OrderId,
+                        Amount = -amountToDeduct, // Negative for deduction
+                        TransactionType = TransactionType.PAYMENT,
+                        Description = $"Final payment for order {order.OrderCode}",
+                        CreatedAt = DateTime.Now,
+                        Isactive = true
+                    };
+                    await _unitOfWork.WalletRepository.CreateTransactionAsync(walletTransaction);
+
+                    // Create payment record
+                    var payment = new Payment
+                    {
+                        PaymentId = Guid.NewGuid(),
+                        OrderId = order.OrderId,
+                        GatewayTxId = $"WALLET-{Guid.NewGuid()}",
+                        Amount = amountToDeduct,
+                        PaymentDate = DateTime.Now,
+                        PaymentMethod = "WALLET",
+                        PaymentType = PaymentType.FINAL,
+                        Status = "COMPLETED",
+                        CreatedAt = DateTime.Now,
+                        Isactive = true
+                    };
+                    await _unitOfWork.PaymentRepository.CreateAsync(payment);
                 }
 
-                // Call repository method to finalize payment
-                var amountDue = await _unitOfWork.OrderRepository.FinalizeReturnPaymentUsingWalletAsync(
-                    request.OrderId,
-                    request.FinalPaymentMethod);
+                // Update order status to COMPLETED
+                order.Status = OrderStatus.COMPLETED;
+                order.UpdatedAt = DateTime.Now;
+                await _unitOfWork.OrderRepository.UpdateOrderAsync(order);
 
-                // Refresh order to get updated data
-                order = await _unitOfWork.OrderRepository.GetOrderByIdAsync(request.OrderId);
-
-                var depositPaid = order.Payments
-                    .Where(p => p.PaymentType == PaymentType.DEPOSIT && p.Status == "COMPLETED")
-                    .Sum(p => p.Amount);
+                // Update vehicle status to AVAILABLE
+                if (order.Vehicle != null)
+                {
+                    order.Vehicle.Status = VehicleStatus.AVAILABLE;
+                    order.Vehicle.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.VehicleRepository.UpdateVehicleAsync(order.Vehicle);
+                }
 
                 var response = new FinalizeReturnPaymentResponseDTO
                 {
                     OrderId = order.OrderId,
                     OrderCode = order.OrderCode,
-                    TotalPrice = order.TotalPrice,
-                    DepositPaid = depositPaid,
-                    ExtraCharges = request.ExtraCharges ?? 0,
-                    FinalAmountDue = amountDue,
+                    TotalPrice = amountToDeduct, // Amount processed
+                    DepositPaid = 0, // Not calculating deposit here
+                    FinalAmountDue = amountToDeduct,
                     PaymentMethod = request.FinalPaymentMethod,
-                    PaymentStatus = amountDue > 0 ? "PENDING" : "COMPLETED",
+                    PaymentStatus = "COMPLETED",
                     OrderStatus = order.Status.ToString(),
                     CompletedAt = DateTime.Now,
-                    Message = amountDue > 0 
-                        ? $"Khách hàng cần thanh toán thêm {amountDue:N0} VNĐ"
-                        : amountDue < 0 
-                            ? $"Hoàn trả cho khách hàng {Math.Abs(amountDue):N0} VNĐ"
-                            : "Đơn hàng đã được thanh toán đầy đủ"
+                    Message = $"Đã trừ {amountToDeduct:N0} VNĐ từ ví thành công"
                 };
 
                 return new ServiceResult
@@ -764,7 +817,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error finalizing return payment for order {OrderId}", request.OrderId);
+                _logger.LogError(ex, "Error finalizing return payment for customer {CustomerId}", customerId);
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_EXCEPTION,
