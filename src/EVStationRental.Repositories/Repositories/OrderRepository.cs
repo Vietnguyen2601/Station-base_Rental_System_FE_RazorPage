@@ -296,7 +296,7 @@ namespace EVStationRental.Repositories.Repositories
                 await transaction.CommitAsync();
                 return order.OrderId;
             }
-            catch
+            catch (Exception ex)
             {
                 await transaction.RollbackAsync();
                 throw;

@@ -7,6 +7,7 @@ using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Repositories.Mapper;
 using EVStationRental.Repositories.Models;
 using EVStationRental.Repositories.UnitOfWork;
+using EVStationRental.Repositories.IRepositories;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.InternalServices.IServices.IOrderServices;
 
@@ -15,10 +16,12 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
     public class OrderService : IOrderService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IOrderRepository _orderRepository;
 
-        public OrderService(IUnitOfWork unitOfWork)
+        public OrderService(IUnitOfWork unitOfWork, IOrderRepository orderRepository)
         {
             _unitOfWork = unitOfWork;
+            _orderRepository = orderRepository;
         }
 
         public async Task<IServiceResult> CreateOrderAsync(Guid customerId, CreateOrderRequestDTO request)
@@ -617,8 +620,8 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 // Calculate deposit (10% of base price) - làm tròn
                 var depositAmount = Math.Round(basePrice * 0.10m, 0);
 
-                // Call stored procedure to create order with deposit
-                var orderId = await _unitOfWork.OrderRepository.CreateOrderWithDepositUsingWalletAsync(
+                // Call method to create order with deposit using injected repository (same DbContext)
+                var orderId = await _orderRepository.CreateOrderWithDepositUsingWalletAsync(
                     customerId,
                     request.VehicleId,
                     DateTime.Now,
@@ -633,7 +636,7 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 );
 
                 // Get created order with details
-                var createdOrder = await _unitOfWork.OrderRepository.GetOrderByIdAsync(orderId);
+                var createdOrder = await _orderRepository.GetOrderByIdAsync(orderId);
                 if (createdOrder == null)
                 {
                     return new ServiceResult
