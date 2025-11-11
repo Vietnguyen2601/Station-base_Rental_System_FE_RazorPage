@@ -15,5 +15,6 @@ namespace EVStationRental.Common.DTOs.DashboardDTOs
         public decimal TotalRevenue { get; set; }
         public int TopCount { get; set; }
         public List<TopStationRevenueDTO> TopStations { get; set; } = new();
+        //Demo
     }
 }
