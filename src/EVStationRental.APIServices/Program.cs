@@ -20,6 +20,7 @@ using EVStationRental.Services.InternalServices.Services.VehicleServices;
 using EVStationRental.Services.InternalServices.Services.StationServices;
 using EVStationRental.Services.InternalServices.Services.PromotionServices;
 using EVStationRental.Services.InternalServices.Services.ReportServices;
+using EVStationRental.Services.InternalServices.Services.DamageReportServices;
 using EVStationRental.Services.InternalServices.Services.OrderServices;
 using EVStationRental.Services.InternalServices.Services.PaymentServices;
 using EVStationRental.Services.InternalServices.Services.PaymentServices;
@@ -35,6 +36,8 @@ using System.Security.Claims;
 using System.Text;
 using EVStationRental.Services.InternalServices.IServices.IFeedbackServices;
 using EVStationRental.Services.InternalServices.Services.FeedbackServices;
+using EVStationRental.Services.InternalServices.IServices.IDamageReportServices;
+using EVStationRental.Services.InternalServices.Services.DamageReportServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,6 +83,9 @@ builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
 //report
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
+//damgeReport
+builder.Services.AddScoped<IDamageReportRepository, DamageReportRepository>();
+builder.Services.AddScoped<IDamageReportService, DamageReportService>();
 //order
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
