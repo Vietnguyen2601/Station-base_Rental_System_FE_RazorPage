@@ -1,0 +1,136 @@
+### Test Top Stations By Revenue API
+
+@baseUrl = https://localhost:7095/api
+@token = YOUR_JWT_TOKEN_HERE
+
+### ============================================
+### 1. GET Top 10 Stations - Default (Current Month)
+### ============================================
+GET {{baseUrl}}/Dashboard/top-stations
+Authorization: Bearer {{token}}
+
+### ============================================
+### 2. GET Top 5 Stations - Current Month
+### ============================================
+GET {{baseUrl}}/Dashboard/top-stations?topCount=5
+Authorization: Bearer {{token}}
+
+### ============================================
+### 3. GET Top 3 Stations - By Month (October 2024)
+### ============================================
+GET {{baseUrl}}/Dashboard/top-stations/by-month?month=10&year=2024&topCount=3
+Authorization: Bearer {{token}}
+
+### ============================================
+### 4. GET Top 10 Stations - By Quarter (Q4 2024)
+### ============================================
+GET {{baseUrl}}/Dashboard/top-stations/by-quarter?quarter=4&year=2024&topCount=10
+Authorization: Bearer {{token}}
+
+### ============================================
+### 5. GET Top 5 Stations - By Custom Date Range
+### ============================================
+GET {{baseUrl}}/Dashboard/top-stations/by-custom-date?startDate=2024-10-01&endDate=2024-10-31&topCount=5
+Authorization: Bearer {{token}}
+
+### ============================================
+### 6. GET All Stations (Top 50) - Using Query Params
+### ============================================
+GET {{baseUrl}}/Dashboard/top-stations?Month=11&Year=2024&topCount=50
+Authorization: Bearer {{token}}
+
+### Expected Response:
+# {
+#   "statusCode": 200,
+#   "message": "L?y top 10 tr?m có doanh thu cao nh?t thành công",
+#   "data": {
+#     "filterDescription": "Tháng 10 n?m 2024",
+#     "startDate": "2024-10-01T00:00:00",
+#     "endDate": "2024-10-31T23:59:59",
+#     "totalStations": 4,
+#     "totalRevenue": 1250000.00,
+#     "topCount": 4,
+#     "topStations": [
+#       {
+#         "rank": 1,
+#         "stationId": "guid-here",
+#         "stationName": "Tr?m qu?n 1",
+#         "address": "456 Lê L?i, Qu?n 1, TP.HCM",
+#         "totalRevenue": 450000.00,
+#         "totalOrders": 25,
+#         "completedOrders": 22,
+#         "averageOrderValue": 20454.55,
+#         "totalVehicles": 18,
+#         "rentedVehicles": 4,
+#         "usageRate": 22.22
+#       },
+#       {
+#         "rank": 2,
+#         "stationId": "guid-here",
+#         "stationName": "Tr?m Th? ??c",
+#         "address": "789 Ph?m V?n ??ng, TP. Th? ??c",
+#         "totalRevenue": 380000.00,
+#         "totalOrders": 20,
+#         "completedOrders": 18,
+#         "averageOrderValue": 21111.11,
+#         "totalVehicles": 18,
+#         "rentedVehicles": 3,
+#         "usageRate": 16.67
+#       },
+#       {
+#         "rank": 3,
+#         "stationId": "guid-here",
+#         "stationName": "Tr?m qu?n 7",
+#         "address": "123 Nguy?n V?n Linh, Qu?n 7, TP.HCM",
+#         "totalRevenue": 320000.00,
+#         "totalOrders": 18,
+#         "completedOrders": 15,
+#         "averageOrderValue": 21333.33,
+#         "totalVehicles": 18,
+#         "rentedVehicles": 2,
+#         "usageRate": 11.11
+#       },
+#       {
+#         "rank": 4,
+#         "stationId": "guid-here",
+#         "stationName": "Tr?m qu?n 5",
+#         "address": "321 Tr?n H?ng ??o, Qu?n 5, TP.HCM",
+#         "totalRevenue": 100000.00,
+#         "totalOrders": 8,
+#         "completedOrders": 7,
+#         "averageOrderValue": 14285.71,
+#         "totalVehicles": 18,
+#         "rentedVehicles": 1,
+#         "usageRate": 5.56
+#       }
+#     ]
+#   }
+# }
+
+### ============================================
+### Error Cases
+### ============================================
+
+### Invalid topCount (0)
+GET {{baseUrl}}/Dashboard/top-stations?topCount=0
+Authorization: Bearer {{token}}
+### Expected: 400 Bad Request
+
+### Invalid topCount (> 50)
+GET {{baseUrl}}/Dashboard/top-stations?topCount=100
+Authorization: Bearer {{token}}
+### Expected: 400 Bad Request
+
+### Invalid Month
+GET {{baseUrl}}/Dashboard/top-stations/by-month?month=13&year=2024
+Authorization: Bearer {{token}}
+### Expected: 400 Bad Request
+
+### Invalid Quarter
+GET {{baseUrl}}/Dashboard/top-stations/by-quarter?quarter=5&year=2024
+Authorization: Bearer {{token}}
+### Expected: 400 Bad Request
+
+### No Authentication
+GET {{baseUrl}}/Dashboard/top-stations
+### Expected: 401 Unauthorized
