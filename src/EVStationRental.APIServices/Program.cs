@@ -13,6 +13,7 @@ using EVStationRental.Services.InternalServices.IServices.IReportServices;
 using EVStationRental.Services.InternalServices.IServices.IOrderServices;
 using EVStationRental.Services.InternalServices.IServices.IPaymentServices;
 using EVStationRental.Services.InternalServices.IServices.IWalletServices;
+using EVStationRental.Services.InternalServices.IServices.IDashboardServices;
 using EVStationRental.Services.InternalServices.Services.AccountServices;
 using EVStationRental.Services.InternalServices.Services.AuthServices;
 using EVStationRental.Services.InternalServices.Services.VehicleServices;
@@ -23,6 +24,7 @@ using EVStationRental.Services.InternalServices.Services.OrderServices;
 using EVStationRental.Services.InternalServices.Services.PaymentServices;
 using EVStationRental.Services.InternalServices.Services.PaymentServices;
 using EVStationRental.Services.InternalServices.Services.WalletServices;
+using EVStationRental.Services.InternalServices.Services.DashboardServices;
 using EVStationRental.Services.ExternalService.IServices;
 using EVStationRental.Services.ExternalService.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -92,6 +94,8 @@ builder.Services.AddScoped<DatabasePaymentService>(); // Add database payment se
 //wallet
 builder.Services.AddScoped<IWalletRepository, WalletRepository>();
 builder.Services.AddScoped<IWalletService, WalletService>();
+//dashboard
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Đăng ký UnitOfWork và các Repository liên quan
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
