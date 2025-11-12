@@ -1,0 +1,70 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - EV Station Rental</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/EVStationRental.Presentation.styles.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="bg-dark text-white">
+        <div class="container py-3 d-flex flex-wrap align-items-center justify-content-between">
+            <a class="navbar-brand text-white fw-semibold" asp-page="/Homepage/Home">EV Station Rental</a>
+            <nav class="d-flex gap-3 align-items-center">
+                @if (User.Identity?.IsAuthenticated ?? false)
+                {
+                    <a class="text-white text-decoration-none" asp-page="/Stations/Browse">Thuê xe</a>
+                    if (User.IsInRole("Admin"))
+                    {
+                        <a class="text-white text-decoration-none" asp-page="/Admin/Dashboard/Index">Admin</a>
+                    }
+                    if (User.IsInRole("Staff"))
+                    {
+                        <a class="text-white text-decoration-none" asp-page="/Staff/Dashboard/Index">Staff</a>
+                    }
+                    <a class="text-white text-decoration-none" asp-page="/Customer/Dashboard">Dashboard</a>
+                    <form method="post" asp-page="/Auth/Logout" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-light btn-sm">Đăng xuất</button>
+                    </form>
+                }
+                else
+                {
+                    <a class="text-white text-decoration-none" asp-page="/Auth/Login">Đăng nhập</a>
+                    <a class="text-white text-decoration-none" asp-page="/Auth/Register">Đăng ký</a>
+                }
+            </nav>
+        </div>
+        <hr class="text-secondary my-0" />
+    </header>
+
+    <div class="container py-4">
+        @if (TempData["Ok"] is string okMsg)
+        {
+            <div class="alert alert-success">@okMsg</div>
+        }
+        @if (TempData["Err"] is string errMsg)
+        {
+            <div class="alert alert-danger">@errMsg</div>
+        }
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="border-top text-muted py-3">
+        <div class="container d-flex justify-content-between">
+            <span>&copy; @DateTime.UtcNow.Year - EV Station Rental</span>
+            <a asp-page="/Homepage/Home">Trang chủ</a>
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

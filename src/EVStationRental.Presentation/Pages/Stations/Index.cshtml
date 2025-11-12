@@ -1,0 +1,62 @@
+@page
+@model EVStationRental.Presentation.Pages.Stations.IndexModel
+@{
+    ViewData["Title"] = "Quản lý trạm";
+}
+
+<h2 class="mb-3">Danh sách trạm</h2>
+
+@if (!Model.Items.Any())
+{
+    <div class="alert alert-info">Không có trạm nào.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+            <tr>
+                <th>Tên trạm</th>
+                <th>Địa chỉ</th>
+                <th class="text-center">Sức chứa</th>
+                <th>Tọa độ</th>
+                <th class="text-center">Trạng thái</th>
+                <th class="text-end">Thao tác</th>
+            </tr>
+            </thead>
+            <tbody>
+            @foreach (var station in Model.Items)
+            {
+                <tr>
+                    <td>@station.Name</td>
+                    <td>@station.Address</td>
+                    <td class="text-center">@station.Capacity</td>
+                    <td>
+                        <span class="text-muted">@station.Lat , @station.Long</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge @(station.IsActive ? "bg-success" : "bg-secondary")">
+                            @(station.IsActive ? "Đang hoạt động" : "Tạm dừng")
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <form method="post" asp-page-handler="Toggle" class="d-inline">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@station.StationId" />
+                            <input type="hidden" name="isActive" value="@(!station.IsActive)" />
+                            <button class="btn btn-sm btn-outline-primary" type="submit">
+                                @(station.IsActive ? "Tạm dừng" : "Kích hoạt")
+                            </button>
+                        </form>
+                        <form method="post" asp-page-handler="Delete" class="d-inline ms-2" onsubmit="return confirm('Xóa trạm này?');">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@station.StationId" />
+                            <button class="btn btn-sm btn-outline-danger" type="submit">Xóa</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

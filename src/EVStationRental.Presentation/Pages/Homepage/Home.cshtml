@@ -1,0 +1,28 @@
+@page
+@model EVStationRental.Presentation.Pages.Homepage.HomeModel
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+
+<section class="py-4">
+    <div class="row align-items-center">
+        <div class="col-lg-7">
+            <h1 class="display-5 fw-bold">Thuê xe điện nhanh chóng, không cần chờ API</h1>
+            <p class="lead">Razor Pages kết nối thẳng đến tầng Service/Repository để đem lại trải nghiệm realtime cho quản trị, nhân viên và khách hàng.</p>
+            <div class="mt-4 d-flex gap-3">
+                <a class="btn btn-primary btn-lg" asp-page="/Vehicles/Browse">Khám phá xe</a>
+                <a class="btn btn-outline-secondary btn-lg" asp-page="/Stations/Index">Quản lý trạm</a>
+            </div>
+        </div>
+        <div class="col-lg-5 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Bắt đầu</h5>
+                    <p class="card-text">Đăng nhập để xem dashboard cá nhân hoặc đăng ký tài khoản mới chỉ với vài bước.</p>
+                    <a class="btn btn-success" asp-page="/Auth/Login">Đăng nhập</a>
+                    <a class="btn btn-link" asp-page="/Auth/Register">Đăng ký</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,23 @@
+@page
+@model EVStationRental.Presentation.Pages.Stations.BrowseModel
+@{
+    ViewData["Title"] = "Chọn trạm";
+}
+
+<h2 class="mb-4">Chọn trạm</h2>
+<div class="row">
+@foreach (var station in Model.Stations)
+{
+    <div class="col-md-4 mb-3">
+        <div class="card h-100 shadow-sm">
+            <div class="card-body">
+                <h5>@station.Name</h5>
+                <div class="text-muted">@station.Address</div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a asp-page="/VehicleModels/Browse" asp-route-stationId="@station.StationId" class="btn btn-primary btn-sm">Chọn trạm</a>
+            </div>
+        </div>
+    </div>
+}
+</div>

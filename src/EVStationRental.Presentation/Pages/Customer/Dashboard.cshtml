@@ -1,0 +1,89 @@
+@page
+@model EVStationRental.Presentation.Pages.Customer.DashboardModel
+@{
+    ViewData["Title"] = "Dashboard khách hàng";
+}
+
+<h2 class="mb-4">Xin chào, @User.Identity?.Name</h2>
+
+<section class="mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0">Đơn đang hoạt động</h4>
+        <a class="btn btn-sm btn-outline-primary" asp-page="/Vehicles/Browse">Thuê thêm xe</a>
+    </div>
+
+    @if (!Model.ActiveOrders.Any())
+    {
+        <div class="alert alert-info">Bạn chưa có đơn thuê nào đang xử lý.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Xe</th>
+                    <th>Bắt đầu</th>
+                    <th>Kết thúc</th>
+                    <th class="text-end">Tổng tiền</th>
+                    <th>Trạng thái</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var order in Model.ActiveOrders)
+                {
+                    <tr>
+                        <td class="fw-semibold">@order.OrderCode</td>
+                        <td><span class="text-muted">@order.VehicleId</span></td>
+                        <td>@order.StartTime:g</td>
+                        <td>@order.EndTime?.ToString("g")</td>
+                        <td class="text-end">@order.TotalPrice.ToString("n0") ₫</td>
+                        <td>
+                            <span class="badge bg-warning text-dark">@order.Status</span>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section>
+    <h4 class="mb-3">Lịch sử đơn gần đây</h4>
+    @if (!Model.HistoryOrders.Any())
+    {
+        <div class="alert alert-light border">Chưa có lịch sử.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Xe</th>
+                    <th>Bắt đầu</th>
+                    <th>Kết thúc</th>
+                    <th class="text-end">Tổng tiền</th>
+                    <th>Trạng thái</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var order in Model.HistoryOrders)
+                {
+                    <tr>
+                        <td>@order.OrderCode</td>
+                        <td><span class="text-muted">@order.VehicleId</span></td>
+                        <td>@order.StartTime:g</td>
+                        <td>@order.EndTime?.ToString("g")</td>
+                        <td class="text-end">@order.TotalPrice.ToString("n0") ₫</td>
+                        <td>@order.Status</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
