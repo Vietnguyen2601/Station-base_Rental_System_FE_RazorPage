@@ -87,6 +87,45 @@ public class TopupModel : PageModel
         return RedirectToPage("/Wallet/Topup");
     }
 
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostManualAsync()
+    {
+        Input ??= new WalletTopupVm();
+        if (!ModelState.IsValid)
+        {
+            await EnsureWalletAsync();
+            return Page();
+        }
+
+        var userId = GetCurrentUserId();
+        if (userId == Guid.Empty)
+        {
+            return Challenge();
+        }
+
+        if (!await EnsureWalletAsync())
+        {
+            TempData["Error"] = "Không thể khởi tạo ví. Vui lòng thử lại.";
+            return RedirectToPage("/Wallet/Topup");
+        }
+
+        var result = await _walletService.TopUpWalletAsync(userId, new TopUpWalletDTO
+        {
+            Amount = Input.Amount,
+            PaymentMethod = "MANUAL",
+            Description = BuildManualDescription()
+        });
+
+        if (result.StatusCode is >= 200 and < 300)
+        {
+            TempData["Success"] = "Đã nạp ví thủ công thành công.";
+            return RedirectToPage("/Wallet/History");
+        }
+
+        TempData["Error"] = result.Message ?? "Không thể nạp ví thủ công.";
+        return RedirectToPage("/Wallet/Topup");
+    }
+
     private async Task<bool> EnsureWalletAsync()
     {
         var userId = GetCurrentUserId();
@@ -159,6 +198,11 @@ public class TopupModel : PageModel
         }
 
         return remoteIp.ToString();
+    }
+
+    private string BuildManualDescription()
+    {
+        return $"Manual top-up fallback - {Input.Amount:n0} VNĐ";
     }
 
     public sealed class WalletTopupVm
