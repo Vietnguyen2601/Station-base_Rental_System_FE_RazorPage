@@ -82,5 +82,6 @@ namespace EVStationRental.Repositories.Repositories
                 .Include(t => t.Order)
                 .FirstOrDefaultAsync(t => t.TransactionId == transactionId && t.Isactive);
         }
+
     }
 }

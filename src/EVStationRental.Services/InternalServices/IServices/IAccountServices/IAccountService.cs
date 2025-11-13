@@ -14,5 +14,6 @@ namespace EVStationRental.Services.InternalServices.IServices.IAccountServices
         Task<IServiceResult> GetAllAccountsAsync();
         Task<IServiceResult> SetAccountRolesAsync(Guid accountId, List<Guid> roleIds);
         Task<IServiceResult> SetAdminRoleAsync(Guid accountId);
+        Task<IServiceResult> SoftDeleteAccountAsync(Guid accountId);
     }
 }
