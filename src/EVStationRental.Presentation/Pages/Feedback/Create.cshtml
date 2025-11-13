@@ -1,0 +1,68 @@
+@page
+@model EVStationRental.Presentation.Pages.Feedback.CreateModel
+@{
+    ViewData["Title"] = "Đánh giá đơn hàng";
+}
+
+<div class="page-card">
+    <h2 class="mb-3">Đánh giá đơn hàng</h2>
+    <partial name="~/Pages/Shared/_Alerts.cshtml" />
+
+    @if (Model.OrderSummary is null)
+    {
+        <div class="flash flash-danger">Không tìm thấy đơn hàng.</div>
+    }
+    else
+    {
+        <div class="card-panel mb-4">
+            <h5 class="mb-2">Đơn @Model.OrderSummary.OrderCode</h5>
+            <p class="mb-1">Xe: <strong>@Model.OrderSummary.VehicleReference</strong></p>
+            <p class="mb-1">Thời gian: @Model.OrderSummary.StartTime:g → @Model.OrderSummary.EndTime?.ToString("g")</p>
+            <p class="mb-0">Tổng tiền: <strong>@Model.OrderSummary.TotalPrice.ToString("n0") ₫</strong></p>
+        </div>
+
+        @if (Model.AlreadySubmitted && Model.ExistingFeedback is not null)
+        {
+            <div class="flash flash-info">
+                <h5 class="mb-1">Bạn đã đánh giá đơn hàng này</h5>
+                <p class="mb-1">Số sao: @Model.ExistingFeedback.Rating / 5</p>
+                <p class="mb-0">Nhận xét: @(string.IsNullOrWhiteSpace(Model.ExistingFeedback.Comment) ? "(Không có nhận xét)" : Model.ExistingFeedback.Comment)</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a class="btn btn-outline" asp-page="/Feedback/My">Xem tất cả đánh giá</a>
+                <a class="btn btn-primary" asp-page="/Orders/Details" asp-route-id="@Model.OrderId">Quay lại đơn</a>
+            </div>
+        }
+        else
+        {
+            <form method="post" class="card-panel">
+                @Html.AntiForgeryToken()
+                <input type="hidden" asp-for="OrderId" />
+                <div class="mb-3">
+                    <label asp-for="Input.Rating" class="form-label">Số sao</label>
+                    <select asp-for="Input.Rating" class="form-select">
+                        <option value="">Chọn số sao</option>
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <option value="@i">@i sao</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Input.Rating" class="text-danger"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Input.Comment" class="form-label">Nhận xét</label>
+                    <textarea asp-for="Input.Comment" class="form-control" rows="4"></textarea>
+                    <span asp-validation-for="Input.Comment" class="text-danger"></span>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button type="submit" class="btn btn-primary btn-pill">Gửi đánh giá</button>
+                    <a class="btn btn-outline btn-pill" asp-page="/Orders/Details" asp-route-id="@Model.OrderId">Quay lại đơn</a>
+                </div>
+            </form>
+        }
+    }
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

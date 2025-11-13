@@ -1,0 +1,77 @@
+@page
+@using System.Linq
+@using EVStationRental.Presentation.Models.Admin.Dashboard
+@model EVStationRental.Presentation.Pages.Admin.Dashboard.OrdersModel
+@{
+    ViewData["Title"] = "Báo cáo đơn hàng";
+}
+
+<div class="admin-layout">
+    <partial name="~/Pages/Shared/_AdminSidebar.cshtml" />
+    <div class="admin-content">
+        <div class="page-card mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h2 class="mb-0">Danh sách đơn hàng</h2>
+                <span class="text-muted">Tổng số: @Model.TotalOrders đơn hàng</span>
+            </div>
+            <p class="text-muted mb-3">Khoảng: @Model.FilterDescription</p>
+            @await Html.PartialAsync("~/Pages/Shared/_DashboardFilter.cshtml", Model.FilterVm)
+        </div>
+
+        <div class="page-card">
+            <div class="table-responsive">
+                <table class="table table-modern align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Trạm</th>
+                            <th class="text-end">Đang chờ</th>
+                            <th class="text-end">Đã xác nhận</th>
+                            <th class="text-end">Đang thuê</th>
+                            <th class="text-end">Hoàn thành</th>
+                            <th class="text-end">Huỷ</th>
+                            <th class="text-end">Tổng đơn</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.Stations.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">Không có dữ liệu cho kỳ lọc.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var station in Model.Stations)
+                        {
+                            <tr class="order-row">
+                                <td>
+                                    <div class="fw-semibold">@station.StationName</div>
+                                    <small class="text-muted">@station.Address</small>
+                                </td>
+                                <td class="text-end">@station.PendingOrders</td>
+                                <td class="text-end">@station.ConfirmedOrders</td>
+                                <td class="text-end">@station.OngoingOrders</td>
+                                <td class="text-end">@station.CompletedOrders</td>
+                                <td class="text-end">@station.CanceledOrders</td>
+                                <td class="text-end fw-semibold">@station.TotalOrders</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+            <div id="ordersPagination" class="p-3"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/pagination.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.generatePagination) {
+                generatePagination('#ordersPagination', '.order-row', 10, 'Trước', 'Sau');
+            }
+        });
+    </script>
+}

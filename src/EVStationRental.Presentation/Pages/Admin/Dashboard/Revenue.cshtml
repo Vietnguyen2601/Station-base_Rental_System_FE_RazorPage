@@ -1,0 +1,92 @@
+@page
+@using System.Linq
+@using EVStationRental.Presentation.Models.Admin.Dashboard
+@model EVStationRental.Presentation.Pages.Admin.Dashboard.RevenueModel
+@{
+    ViewData["Title"] = "Báo cáo doanh thu";
+}
+
+<div class="admin-layout">
+    <partial name="~/Pages/Shared/_AdminSidebar.cshtml" />
+    <div class="admin-content">
+        <div class="page-card mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <h2 class="mb-0">Báo cáo doanh thu</h2>
+                <span class="text-muted">@Model.RevenueData.FilterDescription</span>
+            </div>
+            @await Html.PartialAsync("~/Pages/Shared/_DashboardFilter.cshtml", Model.FilterVm)
+        </div>
+
+        <div class="grid-cards mb-4">
+            <div class="stat-card">
+                <p class="stat-card__label">Tổng doanh thu</p>
+                <div class="stat-card__value">@Model.RevenueData.TotalRevenue.ToString("n0") đ</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Đơn hoàn thành</p>
+                <div class="stat-card__value">@Model.TotalCompleted</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Đơn đang xử lý</p>
+                <div class="stat-card__value">@Model.RevenueData.TotalOrders</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Khoảng thời gian</p>
+                <div class="stat-card__value" style="font-size:1.15rem;">@Model.RevenueData.FilterDescription</div>
+            </div>
+        </div>
+
+        <div class="page-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Doanh thu theo trạm</h5>
+                <small class="text-muted">Sắp xếp theo doanh thu giảm dần</small>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Trạm</th>
+                            <th class="text-end">Tổng đơn</th>
+                            <th class="text-end">Hoàn thành</th>
+                            <th class="text-end">Tỷ lệ sử dụng</th>
+                            <th class="text-end">Doanh thu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.StationRevenues.Any())
+                    {
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">Không có dữ liệu.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var station in Model.StationRevenues)
+                        {
+                            <tr class="revenue-row">
+                                <td>@station.StationName</td>
+                                <td class="text-end">@station.TotalOrders</td>
+                                <td class="text-end">@station.CompletedOrders</td>
+                                <td class="text-end">@station.UsageRate.ToString("n2")%</td>
+                                <td class="text-end">@station.TotalRevenue.ToString("n0") đ</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+            <div id="revenuePagination" class="p-3"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/pagination.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.generatePagination) {
+                generatePagination('#revenuePagination', '.revenue-row', 12, 'Trước', 'Sau');
+            }
+        });
+    </script>
+}

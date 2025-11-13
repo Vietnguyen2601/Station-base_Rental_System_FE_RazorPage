@@ -1,0 +1,116 @@
+@using System.Linq
+@using EVStationRental.Presentation.Helpers
+@model EVStationRental.Presentation.Models.Admin.Dashboard.DashboardFilterViewModel
+
+@{
+    var years = (Model.YearOptions ?? Array.Empty<int>()).ToList();
+    if (!years.Any())
+    {
+        var currentYear = DateTime.UtcNow.Year;
+        years = Enumerable.Range(0, 5).Select(i => currentYear - i).ToList();
+    }
+    var months = Enumerable.Range(1, 12).ToList();
+}
+
+<form method="get" action="@Model.FormAction" class="card-panel dashboard-filter mb-4" id="@Model.FormId">
+    @if (Model.HiddenFields != null)
+    {
+        foreach (var entry in Model.HiddenFields)
+        {
+            <input type="hidden" name="@entry.Key" value="@entry.Value" />
+        }
+    }
+
+    <input type="hidden" name="preset" id="@Model.FormId-preset" value="@Model.SelectedPreset" />
+
+    <div class="filter-tabs mb-3" role="tablist">
+        <button type="button" class="filter-tab @(Model.SelectedPreset == DashboardFilterHelper.PresetMonth ? "active" : "")" data-value="month">Theo tháng</button>
+        <button type="button" class="filter-tab @(Model.SelectedPreset == DashboardFilterHelper.PresetQuarter ? "active" : "")" data-value="quarter">Theo quý</button>
+        <button type="button" class="filter-tab @(Model.SelectedPreset == DashboardFilterHelper.PresetYear ? "active" : "")" data-value="year">Theo năm</button>
+        <button type="button" class="filter-tab @(Model.SelectedPreset == DashboardFilterHelper.PresetCustom ? "active" : "")" data-value="custom">Tuỳ chỉnh</button>
+    </div>
+
+    <div class="row g-3 align-items-end">
+        <div class="col-md-3 filter-section" data-filter-section="month">
+            <label class="form-label" for="@Model.FormId-month">Tháng</label>
+            <select class="form-select" id="@Model.FormId-month" name="Filter.Month">
+                @foreach (var month in months)
+                {
+                    <option value="@month" selected="@(Model.Filter.Month == month ? "selected" : null)">@month</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 filter-section" data-filter-section="quarter">
+            <label class="form-label" for="@Model.FormId-quarter">Quý</label>
+            <select class="form-select" id="@Model.FormId-quarter" name="Filter.Quarter">
+                @for (var quarter = 1; quarter <= 4; quarter++)
+                {
+                    <option value="@quarter" selected="@(Model.Filter.Quarter == quarter ? "selected" : null)">Quý @quarter</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 filter-section" data-filter-section="month,quarter,year">
+            <label class="form-label" for="@Model.FormId-year">Năm</label>
+            <select class="form-select" id="@Model.FormId-year" name="Filter.Year">
+                @foreach (var year in years)
+                {
+                    <option value="@year" selected="@(Model.Filter.Year == year ? "selected" : null)">@year</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3 filter-section" data-filter-section="custom">
+            <label class="form-label" for="@Model.FormId-start">Từ ngày</label>
+            <input type="date" class="form-control" id="@Model.FormId-start" name="Filter.StartDate" value="@(Model.Filter.StartDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        <div class="col-md-3 filter-section" data-filter-section="custom">
+            <label class="form-label" for="@Model.FormId-end">Đến ngày</label>
+            <input type="date" class="form-control" id="@Model.FormId-end" name="Filter.EndDate" value="@(Model.Filter.EndDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+        @if (Model.ShowSearchBox)
+        {
+            <div class="col-md-3">
+                <label class="form-label" for="@Model.FormId-search">Tìm kiếm</label>
+                <input type="text" class="form-control" id="@Model.FormId-search" name="@Model.SearchInputName" value="@Model.SearchQuery" placeholder="@Model.SearchPlaceholder" />
+            </div>
+        }
+        <div class="col-md-2">
+            <label class="form-label text-white">.</label>
+            <button class="btn btn-primary w-100" type="submit">Áp dụng</button>
+        </div>
+    </div>
+</form>
+
+<script>
+    (function () {
+        const formId = "@Model.FormId";
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        const presetInput = document.getElementById("@Model.FormId-preset");
+        const tabs = form.querySelectorAll('.filter-tab');
+
+        function toggleSections() {
+            const preset = presetInput?.value ?? "month";
+            const sections = form.querySelectorAll('.filter-section');
+            sections.forEach(section => {
+                const targets = (section.getAttribute('data-filter-section') || '').split(',');
+                const shouldShow = targets.some(t => t.trim() === preset) || targets.some(t => t.trim() === '');
+                section.style.display = shouldShow ? '' : 'none';
+            });
+            tabs.forEach(tab => tab.classList.toggle('active', tab.getAttribute('data-value') === preset));
+        }
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const value = tab.getAttribute('data-value');
+                if (!value) return;
+                if (presetInput) {
+                    presetInput.value = value;
+                    toggleSections();
+                }
+            });
+        });
+
+        toggleSections();
+    })();
+</script>

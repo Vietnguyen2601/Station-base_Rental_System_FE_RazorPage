@@ -68,12 +68,12 @@ public class LoginModel : PageModel
 
         if (principal.IsInRole("Admin"))
         {
-            return RedirectToPage("/Admin/Dashboard/Index");
+            return RedirectToPage("/Admin/Accounts/Index");
         }
 
         if (principal.IsInRole("Staff"))
         {
-            return RedirectToPage("/Staff/Dashboard/Index");
+            return RedirectToPage("/Staff/Checkin");
         }
 
         return RedirectToPage("/Homepage/Home");

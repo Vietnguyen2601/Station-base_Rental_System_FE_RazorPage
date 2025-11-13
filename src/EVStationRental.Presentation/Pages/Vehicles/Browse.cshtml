@@ -1,7 +1,20 @@
 @page
+@using System
 @model EVStationRental.Presentation.Pages.Vehicles.BrowseModel
 @{
     ViewData["Title"] = "Danh sách xe";
+    var vehicleImages = new[]
+    {
+        Url.Content("~/imgs/2025-volkswagen-id-buzz_100946039.jpg"),
+        Url.Content("~/imgs/CR-Cars-InlineHero-We-Test-About-50-EVs-Every-Year-Here-Are-the-13-Best-Electric-Cars-2025-1124.webp"),
+        Url.Content("~/imgs/Polestar-3.jpg"),
+        Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg")
+    };
+    string ImageFor(Guid vehicleId)
+    {
+        var hash = Math.Abs(vehicleId.GetHashCode());
+        return vehicleImages[hash % vehicleImages.Length];
+    }
 }
 
 <h2 class="mb-4">Xe khả dụng</h2>
@@ -21,19 +34,21 @@
 }
 else
 {
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    <div class="grid-cards">
         @foreach (var v in Model.Vehicles)
         {
-            <div class="col">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">@v.ModelName</h5>
-                        <p class="card-subtitle text-muted mb-2">@v.Manufacturer</p>
-                        <p class="mb-1"><strong>Số khung:</strong> @v.SerialNumber</p>
-                        <p class="mb-1"><strong>Màu:</strong> @v.Color</p>
-                        <p class="mb-1"><strong>Specs:</strong> @v.Specs</p>
-                        <div class="mt-3 fw-semibold text-primary">@v.PricePerHour.ToString("n0") ₫/giờ</div>
-                    </div>
+            var image = ImageFor(v.VehicleId);
+            <div class="card vehicle-card">
+                <div class="vehicle-thumb">
+                    <img src="@image" alt="Xe điện khả dụng" loading="lazy" />
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">@v.ModelName</h5>
+                    <p class="card-subtitle text-muted mb-2">@v.Manufacturer</p>
+                    <p class="mb-1"><strong>Số khung:</strong> @v.SerialNumber</p>
+                    <p class="mb-1"><strong>Màu:</strong> @v.Color</p>
+                    <p class="mb-1"><strong>Specs:</strong> @v.Specs</p>
+                    <div class="mt-3 fw-semibold text-primary">@v.PricePerHour.ToString("n0") ₫/giờ</div>
                 </div>
             </div>
         }

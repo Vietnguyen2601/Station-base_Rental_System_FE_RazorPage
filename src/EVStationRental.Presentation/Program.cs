@@ -14,6 +14,7 @@ using EVStationRental.Services.InternalServices.IServices.IOrderServices;
 using EVStationRental.Services.InternalServices.IServices.IPaymentServices;
 using EVStationRental.Services.InternalServices.IServices.IPromotionServices;
 using EVStationRental.Services.InternalServices.IServices.IReportServices;
+using EVStationRental.Services.InternalServices.IServices.IRolesServices;
 using EVStationRental.Services.InternalServices.IServices.IStationServices;
 using EVStationRental.Services.InternalServices.IServices.IVehicleServices;
 using EVStationRental.Services.InternalServices.IServices.IWalletServices;
@@ -26,10 +27,12 @@ using EVStationRental.Services.InternalServices.Services.OrderServices;
 using EVStationRental.Services.InternalServices.Services.PaymentServices;
 using EVStationRental.Services.InternalServices.Services.PromotionServices;
 using EVStationRental.Services.InternalServices.Services.ReportServices;
+using EVStationRental.Services.InternalServices.Services.RoleServices;
 using EVStationRental.Services.InternalServices.Services.StationServices;
 using EVStationRental.Services.InternalServices.Services.VehicleServices;
 using EVStationRental.Services.InternalServices.Services.WalletServices;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -87,6 +90,7 @@ builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IRolesServices, RoleServices>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddScoped<DatabasePaymentService>();
 
@@ -113,6 +117,19 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("StaffOrAdmin", policy => policy.RequireRole("Staff", "Admin"));
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+builder.Services.AddSession(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -121,10 +138,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseSession();
 
 app.UseAuthentication();
 app.UseAuthorization();

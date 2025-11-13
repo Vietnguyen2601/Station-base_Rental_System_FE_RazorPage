@@ -1,0 +1,100 @@
+@page
+@using System.Linq
+@using EVStationRental.Presentation.Models.Admin.Dashboard
+@model EVStationRental.Presentation.Pages.Admin.Dashboard.OverviewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+}
+
+<div class="admin-layout">
+    <partial name="~/Pages/Shared/_AdminSidebar.cshtml" />
+    <div class="admin-content">
+        <div class="page-card mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h2 class="mb-0">Tổng quan hệ thống</h2>
+                <span class="text-muted">Khoảng: @Model.Summary.FilterDescription</span>
+            </div>
+            @await Html.PartialAsync("~/Pages/Shared/_DashboardFilter.cshtml", Model.FilterVm)
+        </div>
+
+        <section class="grid-cards mb-4">
+            <div class="stat-card">
+                <p class="stat-card__label">Tổng đơn</p>
+                <div class="stat-card__value">@Model.Summary.TotalOrders</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Đang chờ</p>
+                <div class="stat-card__value">@Model.Summary.Pending</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Đã xác nhận</p>
+                <div class="stat-card__value">@Model.Summary.Confirmed</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Đang thuê</p>
+                <div class="stat-card__value">@Model.Summary.Ongoing</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Hoàn thành</p>
+                <div class="stat-card__value">@Model.Summary.Completed</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Huỷ</p>
+                <div class="stat-card__value">@Model.Summary.Canceled</div>
+            </div>
+        </section>
+
+        <section class="grid-cards mb-4">
+            <div class="stat-card">
+                <p class="stat-card__label">Tổng doanh thu</p>
+                <div class="stat-card__value">@Model.Summary.TotalRevenue.ToString("n0") đ</div>
+            </div>
+            <div class="stat-card">
+                <p class="stat-card__label">Tỷ lệ hoàn thành</p>
+                @{
+                    var completionRate = Model.Summary.TotalOrders > 0
+                        ? (decimal)Model.Summary.Completed / Model.Summary.TotalOrders * 100
+                        : 0;
+                }
+                <div class="stat-card__value">@completionRate.ToString("n1")%</div>
+            </div>
+        </section>
+
+        <section class="page-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Top trạm</h5>
+                <small class="text-muted">Dựa trên doanh thu</small>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern mb-0">
+                    <thead>
+                        <tr>
+                            <th>Trạm</th>
+                            <th class="text-end">Tổng đơn</th>
+                            <th class="text-end">Doanh thu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @if (!Model.TopStations.Any())
+                    {
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">Chưa có dữ liệu cho bộ lọc hiện tại.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var station in Model.TopStations)
+                        {
+                            <tr>
+                                <td>@station.StationName</td>
+                                <td class="text-end">@station.TotalOrders</td>
+                                <td class="text-end">@station.TotalRevenue.ToString("n0") đ</td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

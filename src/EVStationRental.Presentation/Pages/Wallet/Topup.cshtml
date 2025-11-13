@@ -1,0 +1,53 @@
+@page
+@model EVStationRental.Presentation.Pages.Wallet.TopupModel
+@{
+    ViewData["Title"] = "Nạp ví";
+}
+
+<partial name="~/Pages/Shared/_Alerts.cshtml" />
+
+<div class="page-card">
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card-panel h-100">
+                <p class="text-muted mb-1">Số dư hiện tại</p>
+                <p class="display-6 text-success">@Model.CurrentBalance.ToString("n0") ₫</p>
+                <a class="btn btn-link px-0" asp-page="/Wallet/History">Xem lịch sử ví</a>
+            </div>
+        </div>
+        <div class="col-lg-8">
+            <div class="card-panel">
+                <h2 class="mb-2">Nạp tiền qua VNPay</h2>
+                <p class="text-muted mb-4">
+                    Giao dịch được chuyển đến cổng VNPay sandbox. Sau khi thanh toán thành công, hệ thống sẽ cập nhật số dư ví của bạn ngay lập tức.
+                </p>
+                <form method="post" class="form-modern">
+                    @Html.AntiForgeryToken()
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="mb-3">
+                        <label asp-for="Input.Amount" class="form-label"></label>
+                        <div class="input-group">
+                            <input asp-for="Input.Amount" class="form-control" />
+                            <span class="input-group-text">VNĐ</span>
+                        </div>
+                        <div class="form-text">Tối thiểu 10.000 VNĐ, tối đa 50.000.000 VNĐ.</div>
+                        <span asp-validation-for="Input.Amount" class="text-danger"></span>
+                    </div>
+                    <button class="btn btn-primary btn-pill w-100" type="submit">Thanh toán qua VNPay</button>
+                </form>
+                <div class="mt-4">
+                    <div class="small text-muted">Lưu ý:</div>
+                    <ul class="small text-muted mb-0">
+                        <li>Đảm bảo trình duyệt không chặn popup/redirect khi chuyển đến VNPay.</li>
+                        <li>Sau khi hoàn tất, VNPay sẽ tự động đưa bạn trở lại trang thông báo kết quả.</li>
+                        <li>Bạn có thể xem mọi giao dịch trong mục “Lịch sử ví”.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="~/Pages/Shared/_ValidationScriptsPartial.cshtml" />
+}

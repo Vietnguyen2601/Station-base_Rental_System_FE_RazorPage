@@ -1,9 +1,22 @@
-@if (TempData["Ok"] is string okMessage)
-{
-    <div class="alert alert-success">@okMessage</div>
+@{
+    string? ResolveTemp(string key) => TempData.ContainsKey(key) ? TempData[key]?.ToString() : null;
+
+    var success = ResolveTemp("Success") ?? ResolveTemp("Ok");
+    var error = ResolveTemp("Error") ?? ResolveTemp("Err");
+    var info = ResolveTemp("Info");
 }
 
-@if (TempData["Err"] is string errMessage)
+@if (!string.IsNullOrEmpty(success))
 {
-    <div class="alert alert-danger">@errMessage</div>
+    <div class="flash flash-success">@success</div>
+}
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="flash flash-danger">@error</div>
+}
+
+@if (!string.IsNullOrEmpty(info))
+{
+    <div class="flash flash-info">@info</div>
 }

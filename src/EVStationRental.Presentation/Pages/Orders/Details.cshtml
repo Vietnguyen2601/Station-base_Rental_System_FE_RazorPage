@@ -1,0 +1,69 @@
+@page "{id:guid}"
+@model EVStationRental.Presentation.Pages.Orders.DetailsModel
+@{
+    ViewData["Title"] = "Chi tiết đơn";
+}
+
+<div class="page-card">
+    <h2 class="mb-3">Chi tiết đơn</h2>
+    <partial name="~/Pages/Shared/_Alerts.cshtml" />
+
+    @if (Model.Order is null)
+    {
+        <div class="flash flash-danger">Không tìm thấy đơn.</div>
+    }
+    else
+    {
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="card-panel">
+                    <p class="text-muted mb-1">Mã đơn</p>
+                    <p class="fw-bold">@Model.Order.OrderCode</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card-panel">
+                    <p class="text-muted mb-1">Trạng thái</p>
+                    <span class="badge badge-info">@Model.Order.Status</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card-panel">
+                    <p class="text-muted mb-1">Thời gian</p>
+                    <p>@Model.Order.StartTime:g → @Model.Order.EndTime?.ToString("g")</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card-panel">
+                    <p class="text-muted mb-1">Tổng tiền</p>
+                    <p class="fw-bold">@Model.Order.TotalPrice.ToString("n0") ₫</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap mb-4">
+            <a class="btn btn-outline" asp-page="/Orders/My">Quay lại</a>
+            @if (Model.Order.Status == EVStationRental.Common.Enums.EnumModel.OrderStatus.COMPLETED)
+            {
+                if (Model.Feedback is null)
+                {
+                    <a class="btn btn-success btn-pill" asp-page="/Feedback/Create" asp-route-orderId="@Model.Order.OrderId">Đánh giá chuyến này</a>
+                }
+                else
+                {
+                    <span class="badge badge-success align-self-center">Đã đánh giá</span>
+                }
+            }
+        </div>
+
+        @if (Model.Feedback is not null)
+        {
+            <div class="card-panel">
+                <h5 class="mb-2">Đánh giá của bạn</h5>
+                <p class="mb-1">Số sao: <strong>@Model.Feedback.Rating / 5</strong></p>
+                <p class="mb-1">Nhận xét: @(string.IsNullOrWhiteSpace(Model.Feedback.Comment) ? "(Không có nhận xét)" : Model.Feedback.Comment)</p>
+                <small class="text-muted">Gửi lúc @Model.Feedback.CreatedAt:g</small>
+            </div>
+        }
+    }
+</div>

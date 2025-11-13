@@ -28,6 +28,7 @@ public class BrowseModel : PageModel
     public string? q { get; set; }
 
     public List<ModelVm> Items { get; private set; } = new();
+    public string StationName { get; private set; } = string.Empty;
 
     public async Task<IActionResult> OnGet(CancellationToken cancellationToken)
     {
@@ -59,6 +60,11 @@ public class BrowseModel : PageModel
                 continue;
             }
 
+            if (string.IsNullOrWhiteSpace(StationName))
+            {
+                StationName = stationInfo.Name;
+            }
+
             items.Add(new ModelVm(
                 model.VehicleModelId,
                 model.Name,
@@ -79,6 +85,8 @@ public class BrowseModel : PageModel
                 .Where(item => item.ModelName.Contains(q, StringComparison.OrdinalIgnoreCase))
                 .ToList();
         }
+
+        StationName = string.IsNullOrWhiteSpace(StationName) ? "Trạm đã chọn" : StationName;
 
         return Page();
     }

@@ -1,28 +1,66 @@
 @page
+@using System
 @model EVStationRental.Presentation.Pages.Homepage.HomeModel
 @{
     ViewData["Title"] = "Trang chủ";
+    var vehicleImages = new[]
+    {
+        Url.Content("~/imgs/2025-volkswagen-id-buzz_100946039.jpg"),
+        Url.Content("~/imgs/CR-Cars-InlineHero-We-Test-About-50-EVs-Every-Year-Here-Are-the-13-Best-Electric-Cars-2025-1124.webp"),
+        Url.Content("~/imgs/Polestar-3.jpg"),
+        Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg")
+    };
+    var featuredImages = vehicleImages.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
 }
 
-<section class="py-4">
-    <div class="row align-items-center">
+<section class="page-card hero">
+    <div class="row align-items-center g-4">
         <div class="col-lg-7">
-            <h1 class="display-5 fw-bold">Thuê xe điện nhanh chóng, không cần chờ API</h1>
-            <p class="lead">Razor Pages kết nối thẳng đến tầng Service/Repository để đem lại trải nghiệm realtime cho quản trị, nhân viên và khách hàng.</p>
-            <div class="mt-4 d-flex gap-3">
-                <a class="btn btn-primary btn-lg" asp-page="/Vehicles/Browse">Khám phá xe</a>
-                <a class="btn btn-outline-secondary btn-lg" asp-page="/Stations/Index">Quản lý trạm</a>
+            <p class="badge badge-info mb-3">EV Rental Platform</p>
+            <h1 class="display-5 fw-bold mb-3">Thuê xe điện nhanh, an toàn và thông minh</h1>
+            <p class="lead text-muted">Kết nối khách hàng với mạng lưới trạm sạc &amp; xe điện trên toàn hệ thống. Tối ưu vận hành với Dashboard realtime cho quản trị viên.</p>
+            <div class="mt-4 d-flex flex-wrap gap-3">
+                <a class="btn btn-primary btn-pill btn-lg" asp-page="/Vehicles/Browse">Khám phá xe</a>
+                <a class="btn btn-outline btn-pill btn-lg" asp-page="/Stations/Browse">Xem trạm gần bạn</a>
             </div>
         </div>
-        <div class="col-lg-5 text-center">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title">Bắt đầu</h5>
-                    <p class="card-text">Đăng nhập để xem dashboard cá nhân hoặc đăng ký tài khoản mới chỉ với vài bước.</p>
-                    <a class="btn btn-success" asp-page="/Auth/Login">Đăng nhập</a>
-                    <a class="btn btn-link" asp-page="/Auth/Register">Đăng ký</a>
+        <div class="col-lg-5">
+            <div class="card-panel">
+                <h5 class="mb-3">Bắt đầu ngay</h5>
+                <p class="text-muted">Đăng nhập để tiếp tục hành trình hoặc tạo tài khoản mới chỉ với vài bước.</p>
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <a class="btn btn-primary btn-pill flex-fill" asp-page="/Auth/Login">Đăng nhập</a>
+                    <a class="btn btn-outline btn-pill flex-fill" asp-page="/Auth/Register">Đăng ký</a>
                 </div>
             </div>
         </div>
+    </div>
+</section>
+
+<section class="page-card vehicle-showcase">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div>
+            <h4 class="mb-1">Mẫu xe nổi bật</h4>
+            <small class="text-muted">Những chiếc EV sẵn sàng phục vụ bạn</small>
+        </div>
+        <a class="btn btn-outline btn-pill" asp-page="/Vehicles/Browse">Xem tất cả</a>
+    </div>
+    <div class="row g-4">
+        @foreach (var image in featuredImages)
+        {
+            <div class="col-md-3 col-sm-6">
+                <div class="vehicle-card h-100">
+                    <div class="vehicle-thumb">
+                        <img src="@image" alt="Electric vehicle" loading="lazy" />
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-1">EV Rental</p>
+                        <h5 class="mb-2">Mẫu xe tiêu chuẩn</h5>
+                        <p class="small text-muted mb-3">Phù hợp đô thị, pin 80kWh, sạc nhanh 120kW.</p>
+                        <a class="btn btn-primary btn-pill w-100" asp-page="/Stations/Browse">Đặt ngay</a>
+                    </div>
+                </div>
+            </div>
+        }
     </div>
 </section>
