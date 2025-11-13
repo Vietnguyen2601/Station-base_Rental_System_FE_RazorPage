@@ -1,0 +1,356 @@
+@page "{id:guid}"
+@model EVStationRental.Presentation.Pages.Staff.Orders.DetailsModel
+@{
+    ViewData["Title"] = "Chi tiết đơn hàng";
+    Layout = "~/Pages/Staff/Shared/_StaffLayout.cshtml";
+}
+
+@if (Model.Order == null)
+{
+    <div class="alert alert-danger">
+        Không tìm thấy thông tin đơn hàng
+    </div>
+}
+else
+{
+    <div class="mb-3">
+        <a asp-page="/Staff/Orders/Index" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Quay lại danh sách
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Order Information Card -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-primary text-white py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="bi bi-receipt"></i> Thông tin đơn hàng
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Mã đơn hàng</label>
+                            <div class="fw-bold fs-5 text-primary">@Model.Order.OrderCode</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Trạng thái</label>
+                            <div>
+                                @switch (Model.Order.Status)
+                                {
+                                    case EVStationRental.Common.Enums.EnumModel.OrderStatus.PENDING:
+                                        <span class="badge bg-warning text-dark fs-6">Chờ xác nhận</span>
+                                        break;
+                                    case EVStationRental.Common.Enums.EnumModel.OrderStatus.CONFIRMED:
+                                        <span class="badge bg-info text-dark fs-6">Đã xác nhận</span>
+                                        break;
+                                    case EVStationRental.Common.Enums.EnumModel.OrderStatus.ONGOING:
+                                        <span class="badge bg-primary fs-6">Đang thuê</span>
+                                        break;
+                                    case EVStationRental.Common.Enums.EnumModel.OrderStatus.COMPLETED:
+                                        <span class="badge bg-success fs-6">Hoàn thành</span>
+                                        break;
+                                    case EVStationRental.Common.Enums.EnumModel.OrderStatus.CANCELED:
+                                        <span class="badge bg-danger fs-6">Đã hủy</span>
+                                        break;
+                                    case EVStationRental.Common.Enums.EnumModel.OrderStatus.REFUNDED:
+                                        <span class="badge bg-secondary fs-6">Đã hoàn tiền</span>
+                                        break;
+                                }
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <hr />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Ngày đặt</label>
+                            <div class="fw-semibold">@Model.Order.OrderDate.ToString("dd/MM/yyyy HH:mm:ss")</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Thời gian bắt đầu</label>
+                            <div class="fw-semibold">@Model.Order.StartTime.ToString("dd/MM/yyyy HH:mm")</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Thời gian kết thúc dự kiến</label>
+                            <div class="fw-semibold">
+                                @if (Model.Order.EndTime.HasValue)
+                                {
+                                    @Model.Order.EndTime.Value.ToString("dd/MM/yyyy HH:mm")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Chưa xác định</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Thời gian trả xe thực tế</label>
+                            <div class="fw-semibold">
+                                @if (Model.Order.ReturnTime.HasValue)
+                                {
+                                    @Model.Order.ReturnTime.Value.ToString("dd/MM/yyyy HH:mm")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Chưa trả xe</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <hr />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Giá cơ bản</label>
+                            <div class="fw-semibold">@Model.Order.BasePrice.ToString("N0") đ</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small">Tổng tiền</label>
+                            <div class="fw-bold fs-4 text-success">@Model.Order.TotalPrice.ToString("N0") đ</div>
+                        </div>
+                        @if (Model.Order.ReturnTime.HasValue && Model.FinalPrice > 0)
+                        {
+                            <div class="col-md-6">
+                                <label class="form-label text-muted small">Số tiền cần thanh toán</label>
+                                <div class="fw-bold fs-4 text-danger">@Model.FinalPrice.ToString("N0") đ</div>
+                            </div>
+                        }
+                        @if (Model.Order.PromotionId.HasValue)
+                        {
+                            <div class="col-12">
+                                <label class="form-label text-muted small">Mã khuyến mãi</label>
+                                <div class="fw-semibold">@Model.Order.PromotionId</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            @if (Model.Order.Status == EVStationRental.Common.Enums.EnumModel.OrderStatus.CONFIRMED)
+            {
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">Thao tác</h6>
+                        <form method="post" asp-page-handler="StartOrder" asp-route-id="@Model.Order.OrderId" class="d-inline">
+                            <button type="submit" class="btn btn-success" onclick="return confirm('Bắt đầu đơn hàng này?')">
+                                <i class="bi bi-play-fill"></i> Bắt đầu đơn hàng
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            @if (Model.Order.Status == EVStationRental.Common.Enums.EnumModel.OrderStatus.ONGOING &&
+                    !Model.Order.ReturnTime.HasValue)
+            {
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">Thao tác</h6>
+                        <form method="post" asp-page-handler="UpdateReturnTime" asp-route-id="@Model.Order.OrderId"
+                            class="d-inline">
+                            <button type="submit" class="btn btn-primary"
+                                onclick="return confirm('Xác nhận khách hàng đã trả xe?')">
+                                <i class="bi bi-check-circle"></i> Cập nhật thời gian trả xe
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            @if ((Model.Order.Status == EVStationRental.Common.Enums.EnumModel.OrderStatus.ONGOING ||
+                    Model.Order.Status == EVStationRental.Common.Enums.EnumModel.OrderStatus.COMPLETED) &&
+                    Model.Order.ReturnTime.HasValue)
+            {
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-body">
+                        <form method="post" asp-page-handler="FinalizePayment" asp-route-id="@Model.Order.OrderId">
+                            <button type="submit" class="btn btn-success btn-lg w-100"
+                                onclick="return confirm('Xác nhận thanh toán ' + '@Model.FinalPrice.ToString("N0")' + ' đ từ ví khách hàng?')">
+                                <i class="bi bi-wallet2"></i> Thanh toán từ ví
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-exclamation-triangle-fill text-warning"></i> Báo cáo hư hỏng
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" asp-page-handler="CreateDamageReport" asp-route-id="@Model.Order.OrderId">
+                            <div class="mb-3">
+                                <label asp-for="DamageDescription" class="form-label">
+                                    Mô tả hư hỏng <span class="text-danger">*</span>
+                                </label>
+                                <textarea asp-for="DamageDescription" class="form-control" rows="4"
+                            placeholder="Mô tả chi tiết tình trạng hư hỏng của xe..." required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="EstimatedCost" class="form-label">
+                                    Chi phí ước tính (đ) <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="EstimatedCost" type="number" class="form-control" min="0" step="1000"
+                                    placeholder="0" required />
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="DamageImg" class="form-label">URL hình ảnh (không bắt buộc)</label>
+                                <input asp-for="DamageImg" type="text" class="form-control"
+                                    placeholder="https://example.com/image.jpg" />
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100"
+                                onclick="return confirm('Xác nhận tạo báo cáo hư hỏng?')">
+                                <i class="bi bi-file-earmark-text"></i> Tạo báo cáo hư hỏng
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Side Information -->
+        <div class="col-lg-4">
+            <!-- Customer Info -->
+            @if (Model.Customer != null)
+            {
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-person-fill"></i> Thông tin khách hàng
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Tên đăng nhập</label>
+                            <div class="fw-semibold">@Model.Customer.Username</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Email</label>
+                            <div>@Model.Customer.Email</div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.Customer.ContactNumber))
+                        {
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Số điện thoại</label>
+                                <div>@Model.Customer.ContactNumber</div>
+                            </div>
+                        }
+                        <div class="mb-0">
+                            <label class="form-label text-muted small">ID</label>
+                            <div class="text-muted small">@Model.Customer.AccountId</div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Vehicle Info -->
+            @if (Model.Vehicle != null)
+            {
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-ev-front-fill"></i> Thông tin xe
+                        </h6>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.Vehicle.Img))
+                    {
+                        <img src="@Model.Vehicle.Img" class="card-img-top" alt="@Model.Vehicle.ModelName"
+                            style="height: 200px; object-fit: cover;">
+                    }
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Số serial</label>
+                            <div class="fw-bold text-primary">@Model.Vehicle.SerialNumber</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Mẫu xe</label>
+                            <div class="fw-semibold">@Model.Vehicle.ModelName</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Hãng sản xuất</label>
+                            <div>@Model.Vehicle.Manufacturer</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Loại xe</label>
+                            <div>@Model.Vehicle.TypeName</div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.Vehicle.Color))
+                        {
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Màu sắc</label>
+                                <div>@Model.Vehicle.Color</div>
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Pin</label>
+                            <div>
+                                @if (Model.Vehicle.BatteryLevel.HasValue)
+                                {
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar @(Model.Vehicle.BatteryLevel.Value > 50 ? "bg-success" : Model.Vehicle.BatteryLevel.Value > 20 ? "bg-warning" : "bg-danger")"
+                                            role="progressbar" style="width: @Model.Vehicle.BatteryLevel.Value%"
+                                            aria-valuenow="@Model.Vehicle.BatteryLevel.Value" aria-valuemin="0" aria-valuemax="100">
+                                            @Model.Vehicle.BatteryLevel.Value%
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Không có thông tin</span>
+                                }
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.Vehicle.StationName))
+                        {
+                            <div class="mb-3">
+                                <label class="form-label text-muted small">Trạm</label>
+                                <div>@Model.Vehicle.StationName</div>
+                            </div>
+                        }
+                        <div class="mb-0">
+                            <label class="form-label text-muted small">Giá thuê</label>
+                            <div class="fw-bold text-success">@Model.Vehicle.PricePerHour.ToString("N0") đ/giờ</div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Staff Info -->
+            @if (Model.Staff != null)
+            {
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-person-badge-fill"></i> Nhân viên phụ trách
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Tên</label>
+                            <div class="fw-semibold">@Model.Staff.Username</div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label text-muted small">Email</label>
+                            <div>@Model.Staff.Email</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function () {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function (alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 3000);
+    </script>
+}
