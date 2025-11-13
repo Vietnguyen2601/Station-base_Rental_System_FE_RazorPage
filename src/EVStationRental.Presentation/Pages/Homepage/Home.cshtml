@@ -25,14 +25,30 @@
             </div>
         </div>
         <div class="col-lg-5">
-            <div class="card-panel">
-                <h5 class="mb-3">Bắt đầu ngay</h5>
-                <p class="text-muted">Đăng nhập để tiếp tục hành trình hoặc tạo tài khoản mới chỉ với vài bước.</p>
-                <div class="d-flex flex-wrap gap-2 mt-3">
-                    <a class="btn btn-primary btn-pill flex-fill" asp-page="/Auth/Login">Đăng nhập</a>
-                    <a class="btn btn-outline btn-pill flex-fill" asp-page="/Auth/Register">Đăng ký</a>
+            @if (!(User.Identity?.IsAuthenticated ?? false))
+            {
+                <div class="card-panel">
+                    <h5 class="mb-3">Bắt đầu ngay</h5>
+                    <p class="text-muted">Đăng nhập để tiếp tục hành trình hoặc tạo tài khoản mới chỉ với vài bước.</p>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a class="btn btn-primary btn-pill flex-fill" asp-page="/Auth/Login">Đăng nhập</a>
+                        <a class="btn btn-outline btn-pill flex-fill" asp-page="/Auth/Register">Đăng ký</a>
+                    </div>
                 </div>
-            </div>
+            }
+            else
+            {
+                <div class="card-panel bg-dark text-white">
+                    <p class="text-uppercase small text-muted mb-1">Đã đăng nhập</p>
+                    <h4 class="mb-3">Xin chào, @Model.DisplayName</h4>
+                    <p class="text-muted">Tiếp tục hành trình của bạn hoặc quản lý các giao dịch hiện tại.</p>
+                    <div class="d-flex flex-column gap-2 mt-3">
+                        <a class="btn btn-primary btn-pill" asp-page="/Vehicles/Browse">Thuê xe ngay</a>
+                        <a class="btn btn-outline btn-pill text-white border-light" asp-page="/Orders/My">Đơn của tôi</a>
+                        <a class="btn btn-outline btn-pill text-white border-light" asp-page="/Wallet/Topup">Nạp ví</a>
+                    </div>
+                </div>
+            }
         </div>
     </div>
 </section>

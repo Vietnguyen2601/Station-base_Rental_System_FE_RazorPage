@@ -39,6 +39,8 @@ namespace EVStationRental.Repositories.Mapper
                 ReturnTime = order.ReturnTime,
                 BasePrice = order.BasePrice,
                 TotalPrice = order.TotalPrice,
+                StationName = order.Vehicle?.Station?.Name ?? string.Empty,
+                StationAddress = order.Vehicle?.Station?.Address ?? string.Empty,
                 PromotionId = order.PromotionId,
                 StaffId = order.StaffId,
                 CreatedAt = order.CreatedAt,

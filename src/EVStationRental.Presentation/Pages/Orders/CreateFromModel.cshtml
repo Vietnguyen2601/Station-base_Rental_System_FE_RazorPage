@@ -1,321 +1,174 @@
 @page "{stationId:guid}/{modelId:guid}"
-@using System
 @model EVStationRental.Presentation.Pages.Orders.CreateFromModelModel
-@using System.Globalization
-@using System.Text.Json
 @{
-    ViewData["Title"] = "Đặt theo mẫu xe";
-    var vehicleImages = new[]
-    {
-        Url.Content("~/imgs/2025-volkswagen-id-buzz_100946039.jpg"),
-        Url.Content("~/imgs/CR-Cars-InlineHero-We-Test-About-50-EVs-Every-Year-Here-Are-the-13-Best-Electric-Cars-2025-1124.webp"),
-        Url.Content("~/imgs/Polestar-3.avif"),
-        Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg")
-    };
-    var previewImage = vehicleImages[Random.Shared.Next(vehicleImages.Length)];
-    var tierPayload = JsonSerializer.Serialize(Model.DiscountTiers.Select((tier, index) => new
-    {
-        Index = index,
-        tier.Range,
-        tier.Description,
-        tier.Percent
-    }));
-    var hourlyRateInvariant = Model.PricePerHour.ToString(CultureInfo.InvariantCulture);
+    ViewData["Title"] = "Đặt xe";
+    var vehicleImage = !string.IsNullOrWhiteSpace(Model.VehicleImageUrl)
+        ? Model.VehicleImageUrl
+        : Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg");
 }
 
-<div class="page-card">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-2">
-        <h2 class="mb-0">Đặt theo mẫu xe</h2>
-        <span class="badge @(Model.SlotAvailable ? "badge-success" : "badge-warning")">
-            @(Model.SlotAvailable ? "Có xe sẵn" : "Hết xe trong khung giờ này")
-        </span>
-    </div>
-    <p class="text-muted">Đặt trước tối thiểu 1 ngày. Đặt cọc 10% để giữ xe và phần còn lại thanh toán theo quy định của trạm.</p>
+<div class="page-card booking-shell">
     <partial name="~/Pages/Shared/_Alerts.cshtml" />
+    <form method="post">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <input type="hidden" asp-for="StationId" />
+        <input type="hidden" asp-for="ModelId" />
+        <input type="hidden" asp-for="Order.VehicleId" />
+        <input type="hidden" asp-for="Order.StationId" />
+        <input type="hidden" asp-for="Order.PaymentMethod" />
 
-    <div class="row g-4 mt-3">
-        <div class="col-lg-7">
-            <div class="vehicle-preview mb-3">
-                <img src="@previewImage" alt="Mẫu xe đang đặt" loading="lazy" />
-            </div>
-
-            <form method="post" asp-page-handler="Preview" class="form-modern">
-                @Html.AntiForgeryToken()
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Bắt đầu</label>
-                        <input class="form-control" asp-for="Input.StartTime" type="datetime-local" min="@Model.MinStartIso" />
-                        <small class="text-muted">Nhận xe sớm nhất: @Model.MinStartTimeDisplay.ToString("g")</small>
-                        <span class="text-danger" asp-validation-for="Input.StartTime"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Kết thúc</label>
-                        <input class="form-control" asp-for="Input.EndTime" type="datetime-local" min="@Model.CurrentStartIso" />
-                        <span class="text-danger" asp-validation-for="Input.EndTime"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Mã khuyến mãi</label>
-                        <input class="form-control" asp-for="Input.PromotionCode" placeholder="Nhập nếu có" />
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Thanh toán</label>
-                        <div class="form-control bg-light fw-semibold">Ví nội bộ (bắt buộc)</div>
-                        <input type="hidden" asp-for="Input.PaymentMethod" value="WALLET" />
-                    </div>
-                </div>
-
-                @if (Model.IsSameDayBlocked)
-                {
-                    <div class="flash flash-warning mt-3">
-                        Chúng tôi tạm ngừng nhận đơn trong ngày. Vui lòng chọn thời gian từ ngày mai.
-                    </div>
-                }
-
-                <div class="mt-3 d-flex align-items-center gap-3 flex-wrap">
-                    <button class="btn btn-outline">Kiểm tra xe &amp; tính phí</button>
-                    <div>Ước tính: <strong id="estimateLabel">@(Model.EstimatedPrice.HasValue ? $"{Model.EstimatedPrice.Value.ToString("n0")} ₫" : "--")</strong></div>
-                </div>
-            </form>
-        </div>
-
-        <div class="col-lg-5">
-            <div class="card-panel mb-3 price-summary" id="bookingSummary"
-                 data-hourly-rate="@hourlyRateInvariant"
-                 data-tier-payload='@Html.Raw(tierPayload)'
-                 data-active-tier="@Model.ActiveDiscountTier">
-                <p class="text-muted text-uppercase small mb-1">Ước tính chi phí</p>
-                @if (Model.EstimatedPrice.HasValue)
-                {
-                    <div class="display-6 fw-bold" id="summaryPrice">@Model.EstimatedPrice.Value.ToString("n0") ₫</div>
-                    <div class="mt-2">
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Số giờ</span>
-                            <strong id="summaryHours">@Model.RentalHours.ToString("n2")h</strong>
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="card-panel mb-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div>
+                            <p class="text-muted mb-1">Trạm đã chọn</p>
+                            <h4 class="mb-1">@Model.Order.StationName</h4>
+                            <small class="text-muted">@Model.Order.StationAddress</small>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Đặt cọc (10%)</span>
-                            <strong class="text-primary" id="summaryDeposit">@Model.DepositAmount?.ToString("n0") ₫</strong>
+                        <span class="badge @(Model.SlotAvailable ? "badge-success" : "badge-warning")">
+                            @(Model.SlotAvailable ? "Có xe sẵn" : "Hết xe trong thời gian này")
+                        </span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Nhận xe</label>
+                            <input class="form-control" asp-for="Order.StartTime" type="datetime-local" />
+                            <span class="text-danger" asp-validation-for="Order.StartTime"></span>
                         </div>
-                        <div class="d-flex justify-content-between">
-                            <span class="text-muted">Ưu đãi hiện tại</span>
-                            <strong class="text-accent" id="summaryDiscount">
-                                @(Model.EffectiveDiscountPercent.HasValue ? $"{Model.EffectiveDiscountPercent.Value:0.#}%" : "0%")
-                            </strong>
+                        <div class="col-md-6">
+                            <label class="form-label">Trả xe</label>
+                            <input class="form-control" asp-for="Order.EndTime" type="datetime-local" />
+                            <span class="text-danger" asp-validation-for="Order.EndTime"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mã khuyến mãi</label>
+                            <input class="form-control" asp-for="Order.PromotionCode" placeholder="Nhập nếu có" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phương thức</label>
+                            <div class="form-control bg-light">Đặt cọc 10% qua ví</div>
                         </div>
                     </div>
-                    <p class="small text-muted mt-3" id="summaryDiscountMessage">@Model.DiscountMessage</p>
-                }
-                else
-                {
-                    <p class="text-muted mb-0">Chọn thời gian thuê để xem giá dự kiến và đặt cọc.</p>
-                }
-            </div>
-
-            <div class="card-panel">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0">Ưu đãi theo thời lượng</h5>
-                    <span class="badge badge-info">Tự động áp dụng</span>
-                </div>
-                <div class="discount-tier-grid">
-                    @for (var i = 0; i < Model.DiscountTiers.Count; i++)
+                    @if (!Model.SlotAvailable)
                     {
-                        var tier = Model.DiscountTiers[i];
-                        var isActive = i == Model.ActiveDiscountTier && Model.EstimatedPrice.HasValue;
-                        <div class="discount-tier @(isActive ? "active" : string.Empty)" data-tier-index="@i">
-                            <div class="discount-tier__range">@tier.Range</div>
-                            <div class="discount-tier__percent">@tier.Percent% OFF</div>
-                            <div class="discount-tier__desc">@tier.Description</div>
+                        <div class="alert alert-info mt-3">
+                            Hiện chưa có xe trống cho khung giờ này. Bạn có thể thay đổi thời gian và kiểm tra lại.
                         </div>
                     }
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <form method="post" asp-page-handler="Confirm" class="agreement-panel mt-4" id="confirmForm">
-        @Html.AntiForgeryToken()
-        <input type="hidden" asp-for="Input.StartTime" />
-        <input type="hidden" asp-for="Input.EndTime" />
-        <input type="hidden" asp-for="Input.PromotionCode" />
-        <input type="hidden" asp-for="Input.PaymentMethod" />
-
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="form-check">
-                    <input class="form-check-input" asp-for="Input.AcceptDepositPolicy" />
-                    <label class="form-check-label" asp-for="Input.AcceptDepositPolicy"></label>
+                <div class="card-panel mb-4">
+                    <h5 class="mb-3">Cam kết trước khi đặt xe</h5>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" asp-for="Order.AcceptDepositPolicy" />
+                        <label class="form-check-label" asp-for="Order.AcceptDepositPolicy"></label>
+                        <span class="text-danger small d-block" asp-validation-for="Order.AcceptDepositPolicy"></span>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" asp-for="Order.AcceptUsagePolicy" />
+                        <label class="form-check-label" asp-for="Order.AcceptUsagePolicy"></label>
+                        <span class="text-danger small d-block" asp-validation-for="Order.AcceptUsagePolicy"></span>
+                    </div>
                 </div>
-                <span class="text-danger small" asp-validation-for="Input.AcceptDepositPolicy"></span>
-            </div>
-            <div class="col-md-6">
-                <div class="form-check">
-                    <input class="form-check-input" asp-for="Input.AcceptUsagePolicy" />
-                    <label class="form-check-label" asp-for="Input.AcceptUsagePolicy"></label>
+
+                @{
+                    var disableSubmit = !(Model.SlotAvailable && Model.HasEnoughDeposit);
+                }
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-outline btn-pill" type="submit" asp-page-handler="Preview">
+                        Kiểm tra &amp; tính phí
+                    </button>
+                    @if (disableSubmit)
+                    {
+                        <button class="btn btn-primary btn-pill disabled" type="submit" asp-page-handler="Confirm" disabled>
+                            Xác nhận &amp; đặt xe
+                        </button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-primary btn-pill" type="submit" asp-page-handler="Confirm">
+                            Xác nhận &amp; đặt xe
+                        </button>
+                    }
                 </div>
-                <span class="text-danger small" asp-validation-for="Input.AcceptUsagePolicy"></span>
+
+                @if (!Model.HasEnoughDeposit)
+                {
+                    <div class="alert alert-warning mt-3">
+                        Ví của bạn không đủ để đặt cọc 10%. Vui lòng <a asp-page="/Wallet/Topup">nạp ví</a> trước khi đặt.
+                    </div>
+                }
             </div>
-        </div>
 
-        <div class="flash flash-info mt-3">
-            Đặt cọc 10% sẽ được giữ trong ví và khấu trừ khi hoàn tất chuyến đi. Phần còn lại thanh toán khi check-in/checkout với nhân viên.
-        </div>
+            <div class="col-lg-5">
+                <div class="card-panel mb-4 vehicle-summary">
+                    <div class="vehicle-thumb mb-3">
+                        <img src="@vehicleImage" alt="Xe đề xuất" />
+                    </div>
+                    <h5 class="mb-1">@Model.Order.VehicleName</h5>
+                    <p class="text-muted mb-3">@Model.VehicleSpecs</p>
+                    <div class="small text-muted">Nhận xe: @Model.Order.StartTime:dd/MM/yyyy HH:mm</div>
+                    <div class="small text-muted mb-3">Trả xe: @Model.Order.EndTime:dd/MM/yyyy HH:mm</div>
+                    <div class="small text-muted">Trạm nhận: @Model.Order.StationName</div>
+                    <div class="small text-muted">@Model.Order.StationAddress</div>
+                </div>
 
-        <div class="text-end mt-3">
-            <button id="confirmButton"
-                    class="btn btn-primary btn-pill"
-                    data-slot-available="@(Model.SlotAvailable.ToString().ToLowerInvariant())"
-                    @(Model.SlotAvailable ? "" : "disabled")
-                    disabled="disabled">
-                Xác nhận đặt xe
-            </button>
+                <div class="card-panel cost-summary">
+                    <h5 class="mb-3">Thông tin chi phí</h5>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Chi phí tạm tính</span>
+                        <strong>@Model.Order.BasePrice.ToString("n0") ₫</strong>
+                    </div>
+                    @if (Model.Order.DiscountAmount > 0)
+                    {
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Ưu đãi thời lượng</span>
+                            <strong>-@Model.Order.DiscountAmount.ToString("n0") ₫</strong>
+                        </div>
+                    }
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Ví hiện có</span>
+                        <strong>@Model.WalletBalance.ToString("n0") ₫</strong>
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tổng sau ưu đãi</span>
+                        <strong class="text-primary">@Model.Order.TotalAfterDiscount.ToString("n0") ₫</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Đặt cọc cần thanh toán (10%)</span>
+                        <strong>@Model.Order.DepositAmount.ToString("n0") ₫</strong>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small">
+                        <span>Trạng thái ví</span>
+                        <span>@(Model.HasEnoughDeposit ? "Đủ để đặt cọc" : "Không đủ để đặt cọc")</span>
+                    </div>
+                </div>
+
+                <div class="card-panel">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Ưu đãi theo thời lượng</h5>
+                        <span class="badge badge-info">Tự động áp dụng</span>
+                    </div>
+                    <div class="discount-tier-grid">
+                        @for (var i = 0; i < Model.DiscountTiers.Count; i++)
+                        {
+                            var tier = Model.DiscountTiers[i];
+                            var isActive = i == Model.ActiveTierIndex;
+                            <div class="discount-tier @(isActive ? "active" : string.Empty)">
+                                <div class="discount-tier__range">@tier.Range</div>
+                                <div class="discount-tier__percent">@tier.Percent% OFF</div>
+                                <div class="discount-tier__desc">@tier.Description</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </form>
 </div>
 
-@section Scripts {
-    <partial name="~/Pages/Shared/_ValidationScriptsPartial.cshtml" />
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const startInput = document.getElementById('Input_StartTime');
-            const endInput = document.getElementById('Input_EndTime');
-            const promoInput = document.getElementById('Input_PromotionCode');
-            const confirmForm = document.getElementById('confirmForm');
-            const summaryCard = document.getElementById('bookingSummary');
-            const hourlyRate = parseFloat(summaryCard?.dataset.hourlyRate ?? '0');
-            const tierPayload = summaryCard ? JSON.parse(summaryCard.dataset.tierPayload ?? '[]') : [];
-            const estimateLabel = document.getElementById('estimateLabel');
-            const acceptDeposit = document.getElementById('Input_AcceptDepositPolicy');
-            const acceptUsage = document.getElementById('Input_AcceptUsagePolicy');
-            const confirmButton = document.getElementById('confirmButton');
-            const slotAvailable = confirmButton?.dataset.slotAvailable === 'true';
-
-            const fieldsToSync = [
-                { source: startInput, selector: 'input[name="Input.StartTime"]' },
-                { source: endInput, selector: 'input[name="Input.EndTime"]' },
-                { source: promoInput, selector: 'input[name="Input.PromotionCode"]' }
-            ];
-
-            function syncHiddenFields() {
-                if (!confirmForm) return;
-                fieldsToSync.forEach(({ source, selector }) => {
-                    if (!source) return;
-                    const hidden = confirmForm.querySelector(selector);
-                    if (hidden) {
-                        hidden.value = source.value;
-                    }
-                });
-            }
-
-            function formatCurrency(value) {
-                if (!Number.isFinite(value)) {
-                    return "--";
-                }
-                const formatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
-                return formatter.format(Math.round(value)) + ' ₫';
-            }
-
-            function getTierIndex(hours) {
-                if (hours <= 12) return 0;
-                if (hours <= 24) return 1;
-                if (hours <= 36) return 2;
-                if (hours <= 48) return 3;
-                return 4;
-            }
-
-            function getMultiplier(hours) {
-                if (hours <= 0) return 0;
-                if (hours <= 12) return 1;
-                if (hours <= 24) return 0.95;
-                if (hours <= 36) return 0.90;
-                return 0.85;
-            }
-
-            function calculateQuote(hours, rate) {
-                if (hours <= 0 || rate <= 0) {
-                    return { totalPrice: 0, deposit: 0, discountPercent: 0, tierIndex: 0 };
-                }
-                const tierIndex = getTierIndex(hours);
-                const multiplier = getMultiplier(hours);
-                const totalPrice = Math.round(hours * rate * multiplier);
-                return {
-                    totalPrice,
-                    deposit: totalPrice * 0.10,
-                    discountPercent: (1 - multiplier) * 100,
-                    tierIndex
-                };
-            }
-
-            function highlightTier(index) {
-                document.querySelectorAll('.discount-tier').forEach(tierEl => {
-                    const tierIndex = parseInt(tierEl.dataset.tierIndex ?? '-1');
-                    tierEl.classList.toggle('active', tierIndex === index);
-                });
-            }
-
-            function updateSummaryFromInputs() {
-                if (!summaryCard || hourlyRate <= 0 || !startInput?.value || !endInput?.value) {
-                    return;
-                }
-
-                const startDate = new Date(startInput.value);
-                const endDate = new Date(endInput.value);
-                if (Number.isNaN(startDate) || Number.isNaN(endDate)) {
-                    return;
-                }
-
-                const diffHours = (endDate - startDate) / 36e5;
-                if (diffHours <= 0) {
-                    return;
-                }
-
-                const quote = calculateQuote(diffHours, hourlyRate);
-                const priceElement = document.getElementById('summaryPrice');
-                const hoursElement = document.getElementById('summaryHours');
-                const depositElement = document.getElementById('summaryDeposit');
-                const discountElement = document.getElementById('summaryDiscount');
-                const discountMessage = document.getElementById('summaryDiscountMessage');
-
-                priceElement && (priceElement.textContent = formatCurrency(quote.totalPrice));
-                hoursElement && (hoursElement.textContent = diffHours.toFixed(2) + 'h');
-                depositElement && (depositElement.textContent = formatCurrency(quote.deposit));
-                discountElement && (discountElement.textContent = quote.discountPercent.toFixed(1) + '%');
-                estimateLabel && (estimateLabel.textContent = formatCurrency(quote.totalPrice));
-
-                const tierInfo = tierPayload.find(t => t.Index === quote.tierIndex || t.index === quote.tierIndex);
-                if (tierInfo && discountMessage) {
-                    discountMessage.textContent = tierInfo.Description ?? tierInfo.description ?? '';
-                }
-
-                highlightTier(quote.tierIndex);
-            }
-
-            [startInput, endInput, promoInput].forEach(field => {
-                if (!field) return;
-                field.addEventListener('change', () => {
-                    syncHiddenFields();
-                    if (field === startInput || field === endInput) {
-                        updateSummaryFromInputs();
-                    }
-                });
-                field.addEventListener('input', () => {
-                    if (field === startInput || field === endInput) {
-                        updateSummaryFromInputs();
-                    }
-                });
-            });
-
-            function toggleConfirmButton() {
-                if (!confirmButton) return;
-                const ready = slotAvailable && acceptDeposit?.checked && acceptUsage?.checked;
-                confirmButton.disabled = !ready;
-            }
-
-            acceptDeposit?.addEventListener('change', toggleConfirmButton);
-            acceptUsage?.addEventListener('change', toggleConfirmButton);
-
-            syncHiddenFields();
-            updateSummaryFromInputs();
-            toggleConfirmButton();
-        });
-    </script>
-}
+<partial name="~/Pages/Shared/_ValidationScriptsPartial.cshtml" />
