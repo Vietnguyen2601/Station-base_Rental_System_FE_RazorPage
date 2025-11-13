@@ -1,0 +1,17 @@
+@{
+    var currentPage = ViewContext.RouteData.Values["page"]?.ToString() ?? string.Empty;
+    Func<string, string> activeClass = page => currentPage.Equals(page, StringComparison.OrdinalIgnoreCase) ? "active" : string.Empty;
+}
+
+<aside class="admin-sidebar">
+    <div class="admin-sidebar__title">EV Admin</div>
+    <nav class="admin-nav">
+        <a class="admin-link @activeClass("/Admin/Index")" asp-page="/Admin/Index">Tổng quan</a>
+        <a class="admin-link @activeClass("/Admin/Dashboard/Overview")" asp-page="/Admin/Dashboard/Overview">Dashboard</a>
+        <a class="admin-link @activeClass("/Admin/Accounts/Index")" asp-page="/Admin/Accounts/Index">Tài khoản</a>
+        <a class="admin-link @activeClass("/Admin/Dashboard/Orders")" asp-page="/Admin/Dashboard/Orders">Đơn hàng</a>
+        <a class="admin-link @activeClass("/Admin/Dashboard/Revenue")" asp-page="/Admin/Dashboard/Revenue">Doanh thu</a>
+        <a class="admin-link @activeClass("/Admin/Dashboard/Stations")" asp-page="/Admin/Dashboard/Stations">Trạm & xe</a>
+        <a class="admin-link @activeClass("/Admin/Dashboard/Wallet")" asp-page="/Admin/Dashboard/Wallet">Ví & thanh toán</a>
+    </nav>
+</aside>

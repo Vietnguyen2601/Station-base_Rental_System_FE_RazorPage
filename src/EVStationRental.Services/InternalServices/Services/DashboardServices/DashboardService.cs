@@ -78,7 +78,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_READ_CODE,
-                    Message = "L?y d? li?u doanh thu theo tr?m thành công",
+                    Message = "L?y d? li?u doanh thu theo tr?m thnh cng",
                     Data = response
                 };
             }
@@ -130,7 +130,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_READ_CODE,
-                    Message = "L?y s? l??ng ??n hàng theo tr?m thành công",
+                    Message = "L?y s? l??ng ??n hng theo tr?m thnh cng",
                     Data = new
                     {
                         FilterType = dateRange.FilterType,
@@ -147,7 +147,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_EXCEPTION,
-                    Message = $"L?i khi l?y s? l??ng ??n hàng: {ex.Message}"
+                    Message = $"L?i khi l?y s? l??ng ??n hng: {ex.Message}"
                 };
             }
         }
@@ -199,7 +199,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_READ_CODE,
-                    Message = "L?y t? l? s? d?ng xe theo tr?m thành công",
+                    Message = "L?y t? l? s? d?ng xe theo tr?m thnh cng",
                     Data = new
                     {
                         FilterType = dateRange.FilterType,
@@ -258,7 +258,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_VALIDATION_CODE,
-                    Message = "Ngày b?t ??u không ???c l?n h?n ngày k?t thúc"
+                    Message = "Ngy b?t ??u khng ???c l?n h?n ngy k?t thc"
                 };
             }
 
@@ -384,7 +384,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_READ_CODE,
-                    Message = "L?y th?ng kê t? l? s? d?ng theo lo?i xe thành công",
+                    Message = "L?y th?ng k t? l? s? d?ng theo lo?i xe thnh cng",
                     Data = response
                 };
             }
@@ -394,7 +394,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.ERROR_EXCEPTION,
-                    Message = $"L?i khi l?y th?ng kê t? l? s? d?ng theo lo?i xe: {ex.Message}"
+                    Message = $"L?i khi l?y th?ng k t? l? s? d?ng theo lo?i xe: {ex.Message}"
                 };
             }
         }
@@ -478,7 +478,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 return new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_READ_CODE,
-                    Message = $"L?y top {topCount} tr?m có doanh thu cao nh?t thành công",
+                    Message = $"L?y top {topCount} tr?m c doanh thu cao nh?t thnh cng",
                     Data = response
                 };
             }
@@ -518,7 +518,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 startDate = new DateTime(year, (quarter - 1) * 3 + 1, 1);
                 endDate = startDate.AddMonths(3).AddSeconds(-1);
                 filterType = "Quarter";
-                description = $"Quý {quarter} n?m {year}";
+                description = $"Quï¿½ {quarter} n?m {year}";
             }
             else if (filter.Month.HasValue)
             {
@@ -529,7 +529,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 startDate = new DateTime(year, month, 1);
                 endDate = startDate.AddMonths(1).AddSeconds(-1);
                 filterType = "Month";
-                description = $"Tháng {month} n?m {year}";
+                description = $"Thï¿½ng {month} n?m {year}";
             }
             else
             {
@@ -538,7 +538,7 @@ namespace EVStationRental.Services.InternalServices.Services.DashboardServices
                 startDate = new DateTime(now.Year, now.Month, 1);
                 endDate = startDate.AddMonths(1).AddSeconds(-1);
                 filterType = "Month";
-                description = $"Tháng {now.Month} n?m {now.Year} (m?c ??nh)";
+                description = $"Thï¿½ng {now.Month} n?m {now.Year} (m?c ??nh)";
             }
 
             return (startDate, endDate, filterType, description);

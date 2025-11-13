@@ -4,20 +4,25 @@
     ViewData["Title"] = "Chọn trạm";
 }
 
-<h2 class="mb-4">Chọn trạm</h2>
-<div class="row">
-@foreach (var station in Model.Stations)
-{
-    <div class="col-md-4 mb-3">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <h5>@station.Name</h5>
-                <div class="text-muted">@station.Address</div>
-            </div>
-            <div class="card-footer bg-transparent">
-                <a asp-page="/VehicleModels/Browse" asp-route-stationId="@station.StationId" class="btn btn-primary btn-sm">Chọn trạm</a>
+<div class="page-card">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Chọn trạm</h2>
+        <p class="text-muted mb-0">Hiện có @Model.Stations.Count trạm hoạt động</p>
+    </div>
+    <div class="row">
+    @foreach (var station in Model.Stations)
+    {
+        <div class="col-md-4 mb-3">
+            <div class="card station-card h-100">
+                <div class="card-body">
+                    <h5 class="mb-1">@station.Name</h5>
+                    <div class="text-muted">@station.Address</div>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <a asp-page="/VehicleModels/Browse" asp-route-stationId="@station.StationId" class="btn btn-primary btn-pill btn-sm w-100">Chọn trạm</a>
+                </div>
             </div>
         </div>
+    }
     </div>
-}
 </div>

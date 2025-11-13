@@ -9,55 +9,62 @@
     <link rel="stylesheet" href="~/EVStationRental.Presentation.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header class="bg-dark text-white">
-        <div class="container py-3 d-flex flex-wrap align-items-center justify-content-between">
-            <a class="navbar-brand text-white fw-semibold" asp-page="/Homepage/Home">EV Station Rental</a>
-            <nav class="d-flex gap-3 align-items-center">
-                @if (User.Identity?.IsAuthenticated ?? false)
+@{
+    var isAuth = User.Identity?.IsAuthenticated ?? false;
+    var isAdmin = User.IsInRole("Admin");
+}
+    <header class="app-header shadow-sm">
+        <div class="app-header__inner">
+            <a class="brand" asp-page="/Homepage/Home">
+                <span class="brand__logo">⚡</span>
+                <span class="brand__text">EV Station Rental</span>
+            </a>
+            <nav class="app-nav">
+                <a asp-page="/Homepage/Home">Trang chủ</a>
+                @if (!isAdmin)
                 {
-                    <a class="text-white text-decoration-none" asp-page="/Stations/Browse">Thuê xe</a>
-                    if (User.IsInRole("Admin"))
-                    {
-                        <a class="text-white text-decoration-none" asp-page="/Admin/Dashboard/Index">Admin</a>
-                    }
-                    if (User.IsInRole("Staff"))
-                    {
-                        <a class="text-white text-decoration-none" asp-page="/Staff/Dashboard/Index">Staff</a>
-                    }
-                    <a class="text-white text-decoration-none" asp-page="/Customer/Dashboard">Dashboard</a>
-                    <form method="post" asp-page="/Auth/Logout" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-outline-light btn-sm">Đăng xuất</button>
-                    </form>
+                    <a asp-page="/Stations/Browse">Thuê xe</a>
+                    <a asp-page="/Vehicles/Browse">Xe</a>
+                    <a asp-page="/Orders/My">Đơn của tôi</a>
+                    <a asp-page="/Wallet/History">Ví của tôi</a>
+                    <a asp-page="/Feedback/My">Đánh giá</a>
+                }
+                @if (isAdmin)
+                {
+                    <a asp-page="/Admin/Index">Admin</a>
+                }
+            </nav>
+            <div class="auth-actions">
+                @if (!isAuth)
+                {
+                    <a class="btn btn-ghost" asp-page="/Auth/Login">Đăng nhập</a>
+                    <a class="btn btn-pill" asp-page="/Auth/Register">Đăng ký</a>
                 }
                 else
                 {
-                    <a class="text-white text-decoration-none" asp-page="/Auth/Login">Đăng nhập</a>
-                    <a class="text-white text-decoration-none" asp-page="/Auth/Register">Đăng ký</a>
+                    <form method="post" asp-page="/Auth/Logout">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-pill btn-outline">Đăng xuất</button>
+                    </form>
                 }
-            </nav>
+            </div>
         </div>
-        <hr class="text-secondary my-0" />
     </header>
 
-    <div class="container py-4">
-        @if (TempData["Ok"] is string okMsg)
-        {
-            <div class="alert alert-success">@okMsg</div>
-        }
-        @if (TempData["Err"] is string errMsg)
-        {
-            <div class="alert alert-danger">@errMsg</div>
-        }
-        <main role="main" class="pb-3">
+    <div class="app-shell">
+        <main class="app-main" role="main">
+            <partial name="~/Pages/Shared/_Alerts.cshtml" />
             @RenderBody()
         </main>
     </div>
 
-    <footer class="border-top text-muted py-3">
-        <div class="container d-flex justify-content-between">
-            <span>&copy; @DateTime.UtcNow.Year - EV Station Rental</span>
-            <a asp-page="/Homepage/Home">Trang chủ</a>
+    <footer class="app-footer">
+        <div class="app-footer__inner">
+            <span>&copy; @DateTime.UtcNow.Year · EV Station Rental</span>
+            <div class="d-inline-flex gap-3">
+                <a asp-page="/Homepage/Home">Trang chủ</a>
+                <a asp-page="/Feedback/My">Phản hồi</a>
+            </div>
         </div>
     </footer>
 

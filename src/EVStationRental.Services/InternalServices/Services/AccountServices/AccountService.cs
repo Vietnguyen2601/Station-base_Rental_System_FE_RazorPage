@@ -232,5 +232,53 @@ namespace EVStationRental.Services.InternalServices.Services.AccountServices
                 };
             }
         }
+
+        public async Task<IServiceResult> SoftDeleteAccountAsync(Guid accountId)
+        {
+            try
+            {
+                // Validate account ID
+                if (accountId == Guid.Empty)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "ID tài khoản không hợp lệ"
+                    };
+                }
+
+                // Check if account exists
+                var account = await unitOfWork.AccountRepository.GetAccountByIdAsync(accountId);
+                if (account == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy tài khoản"
+                    };
+                }
+
+
+
+                // Soft delete account
+                account.Isactive = false;
+                await unitOfWork.AccountRepository.UpdateAsync(account);
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_DELETE_CODE,
+                    Message = "Xoá tài khoản thành công"
+                };
+            }
+            catch (Exception ex)
+            {
+                var innerMessage = ex.InnerException != null ? ex.InnerException.Message : string.Empty;
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi xoá tài khoản: {ex.Message} {innerMessage}"
+                };
+            }
+        }
     }
 }

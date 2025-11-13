@@ -1,0 +1,111 @@
+@page
+@using System.Linq
+@using EVStationRental.Presentation.Models.Admin.Dashboard
+@model EVStationRental.Presentation.Pages.Admin.Dashboard.StationsModel
+@{
+    ViewData["Title"] = "Báo cáo trạm & xe";
+}
+
+<div class="admin-layout">
+    <partial name="~/Pages/Shared/_AdminSidebar.cshtml" />
+    <div class="admin-content">
+        <div class="page-card mb-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h2 class="mb-0">Báo cáo trạm &amp; xe</h2>
+                <span class="text-muted">@Model.StationUsage.FilterDescription</span>
+            </div>
+            @await Html.PartialAsync("~/Pages/Shared/_DashboardFilter.cshtml", Model.FilterVm)
+        </div>
+
+        <section class="row g-4">
+            <div class="col-lg-6">
+                <div class="page-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Hiệu suất trạm</h5>
+                        <small class="text-muted">Tổng quan xe tại trạm</small>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-modern mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Trạm</th>
+                                    <th class="text-end">Xe tổng</th>
+                                    <th class="text-end">Đang thuê</th>
+                                    <th class="text-end">Sẵn có</th>
+                                    <th class="text-end">Tỷ lệ sử dụng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @if (!(Model.StationUsage.Stations?.Any() ?? false))
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">Không có dữ liệu.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var station in Model.StationUsage.Stations)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@station.StationName</div>
+                                            <small class="text-muted">@station.Address</small>
+                                        </td>
+                                        <td class="text-end">@station.TotalVehicles</td>
+                                        <td class="text-end">@station.RentedVehicles</td>
+                                        <td class="text-end">@station.AvailableVehicles</td>
+                                        <td class="text-end">@station.UsageRate.ToString("n1")%</td>
+                                    </tr>
+                                }
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="page-card h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">Top dòng xe</h5>
+                        <small class="text-muted">Hiệu suất theo model</small>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-modern mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th class="text-end">Xe tổng</th>
+                                    <th class="text-end">Đang thuê</th>
+                                    <th class="text-end">Tỷ lệ thuê</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @if (!Model.TopVehicles.Any())
+                            {
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">Không có dữ liệu.</td>
+                                </tr>
+                            }
+                            else
+                            {
+                                foreach (var vehicle in Model.TopVehicles)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-semibold">@vehicle.ModelName</div>
+                                            <small class="text-muted">@vehicle.VehicleType - @vehicle.Manufacturer</small>
+                                        </td>
+                                        <td class="text-end">@vehicle.TotalVehicles</td>
+                                        <td class="text-end">@vehicle.RentedVehicles</td>
+                                        <td class="text-end">@vehicle.RentalRate.ToString("n1")%</td>
+                                    </tr>
+                                }
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

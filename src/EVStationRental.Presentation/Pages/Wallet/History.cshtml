@@ -1,0 +1,71 @@
+@page
+@using System
+@using EVStationRental.Presentation.Models.Admin.Dashboard
+@model EVStationRental.Presentation.Pages.Wallet.HistoryModel
+@{
+    ViewData["Title"] = "Lịch sử ví";
+}
+
+<div class="page-card">
+    <div class="d-flex flex-wrap gap-3 align-items-center mb-4">
+        <div class="card-panel flex-grow-1">
+            <p class="text-muted mb-1">Số dư hiện tại</p>
+            <div class="display-6 text-success">@Model.Balance.ToString("n0") ₫</div>
+        </div>
+        <a class="btn btn-primary btn-pill btn-lg" asp-page="/Wallet/Topup">Nạp thêm</a>
+    </div>
+
+    <h5 class="mb-3">Lịch sử giao dịch</h5>
+    <div id="walletList">
+        @if (!Model.Transactions.Any())
+        {
+            <div class="flash flash-info">Chưa có giao dịch nào.</div>
+        }
+        else
+        {
+            foreach (var tx in Model.Transactions.OrderByDescending(t => t.CreatedAt))
+            {
+                var amount = tx.Amount;
+                var isCredit = amount > 0;
+                var isDebit = amount < 0;
+                var isFailed = tx.Description?.Contains("fail", StringComparison.OrdinalIgnoreCase) == true
+                    || tx.TransactionType?.Equals("FAILED", StringComparison.OrdinalIgnoreCase) == true;
+                var amountText = amount == 0
+                    ? "0 ₫"
+                    : $"{(isCredit ? "+" : "-")}{Math.Abs(amount):n0} ₫";
+                var amountClass = isFailed
+                    ? "text-muted"
+                    : isCredit
+                        ? "text-success"
+                        : "text-danger";
+
+                <div class="wallet-row">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <div class="fw-semibold text-uppercase">@tx.TransactionType</div>
+                            <div class="text-muted small">@tx.CreatedAt:g</div>
+                            <div class="small">@tx.Description</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="fw-bold @amountClass">@amountText</div>
+                            @if (!string.IsNullOrEmpty(tx.OrderCode))
+                            {
+                                <div class="small text-muted">Đơn: @tx.OrderCode</div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+    <div id="walletPagination" class="mt-3"></div>
+</div>
+
+@section Scripts {
+    <script src="~/js/pagination.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            generatePagination('#walletPagination', '.wallet-row', 10, 'Trước', 'Sau');
+        });
+    </script>
+}

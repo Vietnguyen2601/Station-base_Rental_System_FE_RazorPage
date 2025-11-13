@@ -2,32 +2,57 @@
 @model EVStationRental.Presentation.Pages.VehicleModels.BrowseModel
 @{
     ViewData["Title"] = "Chọn mẫu xe";
+    var vehicleImages = new[]
+    {
+        Url.Content("~/imgs/2025-volkswagen-id-buzz_100946039.jpg"),
+        Url.Content("~/imgs/CR-Cars-InlineHero-We-Test-About-50-EVs-Every-Year-Here-Are-the-13-Best-Electric-Cars-2025-1124.webp"),
+        Url.Content("~/imgs/Polestar-3.jpg"),
+        Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg")
+    };
+    string ImageFor(Guid modelId)
+    {
+        var hash = Math.Abs(modelId.GetHashCode());
+        return vehicleImages[hash % vehicleImages.Length];
+    }
 }
 
-<h2 class="mb-4">Chọn mẫu xe</h2>
+<div class="page-card mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Chọn mẫu xe</h2>
+        <span class="text-muted">Trạm: @(string.IsNullOrWhiteSpace(Model.StationName) ? "Đang tải..." : Model.StationName)</span>
+    </div>
+    <form method="get" class="filter-bar">
+        <input type="hidden" name="stationId" value="@Model.StationId" />
+        <input class="form-control" name="q" value="@Model.q" placeholder="Lọc theo mẫu..." />
+        <button class="btn btn-primary btn-pill ms-2" type="submit">Lọc</button>
+    </form>
+</div>
 
-<form method="get" class="mb-3">
-    <input type="hidden" name="stationId" value="@Model.StationId" />
-    <input class="form-control" name="q" value="@Model.q" placeholder="Lọc theo mẫu..." />
-</form>
-
-<div class="row">
+<div class="grid-cards">
 @foreach (var item in Model.Items)
 {
-    <div class="col-md-4 mb-3">
-        <div class="card h-100 shadow-sm">
-            <div class="card-body">
-                <h5>@item.ModelName</h5>
-                <div class="text-muted">@item.Manufacturer • @item.Specs</div>
-                <div class="fw-bold mt-1">@item.PricePerHour.ToString("n0") ₫/giờ</div>
-                <div class="small">Có sẵn: @item.AvailableCount</div>
+    var image = ImageFor(item.ModelId);
+    <div class="card vehicle-card">
+        <div class="vehicle-thumb">
+            <img src="@image" alt="Mẫu xe điện" loading="lazy" />
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h5 class="mb-1">@item.ModelName</h5>
+                    <div class="text-muted small">@item.Manufacturer • @item.Specs</div>
+                </div>
+                <span class="badge @(item.AvailableCount > 0 ? "badge-success" : "badge-warning")">
+                    Có sẵn: @item.AvailableCount
+                </span>
             </div>
-            <div class="card-footer bg-transparent">
-                <a asp-page="/Orders/CreateFromModel"
-                   asp-route-stationId="@Model.StationId"
-                   asp-route-modelId="@item.ModelId"
-                   class="btn btn-primary btn-sm @(item.AvailableCount <= 0 ? "disabled" : "")">Đặt mẫu này</a>
-            </div>
+            <div class="fw-bold">@item.PricePerHour.ToString("n0") ₫/giờ</div>
+        </div>
+        <div class="card-footer bg-transparent border-0">
+            <a asp-page="/Orders/CreateFromModel"
+               asp-route-stationId="@Model.StationId"
+               asp-route-modelId="@item.ModelId"
+               class="btn btn-primary btn-pill w-100 @(item.AvailableCount <= 0 ? "disabled" : "")">Đặt mẫu này</a>
         </div>
     </div>
 }

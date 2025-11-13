@@ -23,7 +23,6 @@
                 <thead>
                 <tr>
                     <th>Mã đơn</th>
-                    <th>Xe</th>
                     <th>Bắt đầu</th>
                     <th>Kết thúc</th>
                     <th class="text-end">Tổng tiền</th>
@@ -35,7 +34,6 @@
                 {
                     <tr>
                         <td class="fw-semibold">@order.OrderCode</td>
-                        <td><span class="text-muted">@order.VehicleId</span></td>
                         <td>@order.StartTime:g</td>
                         <td>@order.EndTime?.ToString("g")</td>
                         <td class="text-end">@order.TotalPrice.ToString("n0") ₫</td>
@@ -63,7 +61,6 @@
                 <thead>
                 <tr>
                     <th>Mã đơn</th>
-                    <th>Xe</th>
                     <th>Bắt đầu</th>
                     <th>Kết thúc</th>
                     <th class="text-end">Tổng tiền</th>
@@ -75,7 +72,6 @@
                 {
                     <tr>
                         <td>@order.OrderCode</td>
-                        <td><span class="text-muted">@order.VehicleId</span></td>
                         <td>@order.StartTime:g</td>
                         <td>@order.EndTime?.ToString("g")</td>
                         <td class="text-end">@order.TotalPrice.ToString("n0") ₫</td>
