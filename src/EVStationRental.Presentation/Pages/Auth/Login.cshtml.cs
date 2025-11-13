@@ -73,7 +73,7 @@ public class LoginModel : PageModel
 
         if (principal.IsInRole("Staff"))
         {
-            return RedirectToPage("/Staff/Checkin");
+            return RedirectToPage("/Staff/Dashboard/Index");
         }
 
         return RedirectToPage("/Homepage/Home");
