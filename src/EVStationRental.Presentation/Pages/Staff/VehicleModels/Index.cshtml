@@ -1,0 +1,30 @@
+@page
+@model EVStationRental.Presentation.Pages.Staff.VehicleModels.IndexModel
+@{
+    ViewData["Title"] = "Quản lý mẫu xe";
+    Layout = "~/Pages/Staff/Shared/_StaffLayout.cshtml";
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-bold">Danh sách mẫu xe</h5>
+        <div class="d-flex gap-2">
+            <input type="text" class="form-control" placeholder="Tìm kiếm mẫu xe..." style="min-width: 250px;">
+            <button class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg"
+                    viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
+                </svg>
+                Thêm mẫu xe
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-12 text-center text-muted py-5">
+                Chưa có mẫu xe nào
+            </div>
+        </div>
+    </div>
+</div>

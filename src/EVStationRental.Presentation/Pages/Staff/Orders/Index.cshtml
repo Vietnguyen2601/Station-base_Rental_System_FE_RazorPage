@@ -1,0 +1,258 @@
+@page
+@model EVStationRental.Presentation.Pages.Staff.Orders.IndexModel
+@{
+    ViewData["Title"] = "Quản lý đơn hàng";
+    Layout = "~/Pages/Staff/Shared/_StaffLayout.cshtml";
+}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <h5 class="mb-0 fw-bold">Danh sách đơn hàng</h5>
+            </div>
+            <div class="col-md-8">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-auto flex-grow-1">
+                        <input type="text" asp-for="SearchQuery" class="form-control"
+                            placeholder="Nhập mã đơn hàng..." />
+                    </div>
+                    <div class="col-auto">
+                        <select asp-for="StatusFilter" class="form-select">
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="PENDING">Chờ xác nhận</option>
+                            <option value="CONFIRMED">Đã xác nhận</option>
+                            <option value="ONGOING">Đang thuê</option>
+                            <option value="COMPLETED">Hoàn thành</option>
+                            <option value="CANCELED">Đã hủy</option>
+                            <option value="REFUNDED">Đã hoàn tiền</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <select asp-for="SortOrder" class="form-select">
+                            <option value="newest">Mới nhất</option>
+                            <option value="oldest">Cũ nhất</option>
+                            <option value="price-high">Giá cao</option>
+                            <option value="price-low">Giá thấp</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel"></i> Lọc
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(Model.SearchQuery) || !string.IsNullOrEmpty(Model.StatusFilter))
+                    {
+                        <div class="col-auto">
+                            <a asp-page="/Staff/Orders/Index" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Xóa bộ lọc
+                            </a>
+                        </div>
+                    }
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="mb-3 d-flex justify-content-between align-items-center">
+            <div class="text-muted">
+                Tổng số: <strong>@Model.Orders.Count</strong> đơn hàng
+                @if (!string.IsNullOrEmpty(Model.StatusFilter))
+                {
+                    <span class="badge bg-secondary ms-2">
+                        @switch (Model.StatusFilter)
+                        {
+                            case "PENDING":
+                                <text>Chờ xác nhận</text>
+                                ; break;
+                            case "CONFIRMED":
+
+                                <text>Đã xác nhận</text>
+                                ; break;
+                            case "ONGOING":
+
+                                <text>Đang thuê</text>
+                                ; break;
+                            case "COMPLETED":
+
+                                <text>Hoàn thành</text>
+                                ; break;
+                            case "CANCELED":
+
+                                <text>Đã hủy</text>
+                                ; break;
+                            case "REFUNDED":
+
+                                <text>Đã hoàn tiền</text>
+                                ; break;
+                        }
+                    </span>
+                }
+            </div>
+            <div class="text-muted small">
+                Sắp xếp: <strong>
+                    @switch (Model.SortOrder)
+                    {
+                        case "newest":
+                            <text>Mới nhất</text>
+                            ; break;
+                        case "oldest":
+
+                            <text>Cũ nhất</text>
+                            ; break;
+                        case "price-high":
+
+                            <text>Giá cao → thấp</text>
+                            ; break;
+                        case "price-low":
+
+                            <text>Giá thấp → cao</text>
+                            ; break;
+                    }
+                </strong>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã đơn hàng</th>
+                        <th>Khách hàng</th>
+                        <th>Xe</th>
+                        <th>Ngày đặt</th>
+                        <th>Thời gian thuê</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end">Tổng tiền</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Orders.Any())
+                    {
+                        @foreach (var order in Model.Orders)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@order.OrderCode</strong>
+                                </td>
+                                <td>
+                                    @if (Model.CustomerNames.TryGetValue(order.CustomerId, out var customerName))
+                                    {
+                                        <div>
+                                            <strong>@customerName</strong>
+                                        </div>
+                                        <small class="text-muted">@order.CustomerId.ToString().Substring(0, 8)...</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">@order.CustomerId.ToString().Substring(0, 8)...</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (Model.VehicleSerialNumbers.TryGetValue(order.VehicleId, out var serialNumber))
+                                    {
+                                        <div>
+                                            <strong>@serialNumber</strong>
+                                        </div>
+                                        <small class="text-muted">@order.VehicleId.ToString().Substring(0, 8)...</small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">@order.VehicleId.ToString().Substring(0, 8)...</small>
+                                    }
+                                </td>
+                                <td>
+                                    @order.OrderDate.ToString("dd/MM/yyyy HH:mm")
+                                </td>
+                                <td>
+                                    <small>
+                                        <strong>Bắt đầu:</strong> @order.StartTime.ToString("dd/MM HH:mm")<br />
+                                        @if (order.EndTime.HasValue)
+                                        {
+                                            <strong>Kết thúc:</strong>
+                                            @order.EndTime.Value.ToString("dd/MM HH:mm")
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Chưa xác định</span>
+                                        }
+                                    </small>
+                                </td>
+                                <td>
+                                    @switch (order.Status)
+                                    {
+                                        case EVStationRental.Common.Enums.EnumModel.OrderStatus.PENDING:
+                                            <span class="badge bg-warning text-dark">Chờ xác nhận</span>
+                                            break;
+                                        case EVStationRental.Common.Enums.EnumModel.OrderStatus.CONFIRMED:
+                                            <span class="badge bg-info text-dark">Đã xác nhận</span>
+                                            break;
+                                        case EVStationRental.Common.Enums.EnumModel.OrderStatus.ONGOING:
+                                            <span class="badge bg-primary">Đang thuê</span>
+                                            break;
+                                        case EVStationRental.Common.Enums.EnumModel.OrderStatus.COMPLETED:
+                                            <span class="badge bg-success">Hoàn thành</span>
+                                            break;
+                                        case EVStationRental.Common.Enums.EnumModel.OrderStatus.CANCELED:
+                                            <span class="badge bg-danger">Đã hủy</span>
+                                            break;
+                                        case EVStationRental.Common.Enums.EnumModel.OrderStatus.REFUNDED:
+                                            <span class="badge bg-secondary">Đã hoàn tiền</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <strong>@order.TotalPrice.ToString("N0") đ</strong>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        @if (order.Status == EVStationRental.Common.Enums.EnumModel.OrderStatus.CONFIRMED)
+                                        {
+                                            <form method="post" asp-page-handler="StartOrder" class="d-inline">
+                                                <input type="hidden" name="orderId" value="@order.OrderId" />
+                                                <button type="submit" class="btn btn-sm btn-success"
+                                                    onclick="return confirm('Bắt đầu đơn hàng này?')">
+                                                    <i class="bi bi-play-fill"></i> Bắt đầu
+                                                </button>
+                                            </form>
+                                        }
+                                        <a asp-page="/Staff/Orders/Details" asp-route-id="@order.OrderId"
+                                            class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> Chi tiết
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor"
+                                    class="bi bi-inbox mb-3" viewBox="0 0 16 16">
+                                    <path
+                                        d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .12.374l-.4 3.2A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.493-1.238l-.4-3.2a.5.5 0 0 1 .12-.374z" />
+                                </svg>
+                                <p>@(string.IsNullOrEmpty(Model.SearchQuery) ? "Chưa có đơn hàng nào" : "Không tìm thấy đơn                            hàng")</p>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-hide alerts after 3 seconds
+        setTimeout(function () {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function (alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 3000);
+    </script>
+}
