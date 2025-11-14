@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using EVStationRental.Common.DTOs.PaymentDTOs;
+using EVStationRental.Common.DTOs.Realtime;
 using EVStationRental.Common.DTOs.WalletDTOs;
 using EVStationRental.Common.Enums.EnumModel;
 using EVStationRental.Common.Enums.ServiceResultEnum;
@@ -10,6 +11,7 @@ using EVStationRental.Repositories.UnitOfWork;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.ExternalService.IServices;
 using EVStationRental.Services.InternalServices.IServices.IWalletServices;
+using EVStationRental.Services.Realtime;
 using Microsoft.Extensions.Logging;
 
 namespace EVStationRental.Services.InternalServices.Services.WalletServices
@@ -19,12 +21,18 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<WalletService> _logger;
         private readonly IVNPayService _vnpayService;
+        private readonly IRealtimeNotifier _realtimeNotifier;
 
-        public WalletService(IUnitOfWork unitOfWork, ILogger<WalletService> logger, IVNPayService vnpayService)
+        public WalletService(
+            IUnitOfWork unitOfWork,
+            ILogger<WalletService> logger,
+            IVNPayService vnpayService,
+            IRealtimeNotifier realtimeNotifier)
         {
             _unitOfWork = unitOfWork;
             _logger = logger;
             _vnpayService = vnpayService;
+            _realtimeNotifier = realtimeNotifier;
         }
 
         /// <summary>
@@ -117,6 +125,7 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
                     wallet.Balance += request.Amount;
                     wallet.UpdatedAt = DateTime.Now;
                     await _unitOfWork.WalletRepository.UpdateWalletAsync(wallet);
+                    await NotifyWalletUpdatedAsync(wallet, transaction);
 
                     var response = new TopUpResponseDTO
                     {
@@ -427,6 +436,7 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
                     wallet.Balance += transaction.Amount;
                     wallet.UpdatedAt = DateTime.Now;
                     await _unitOfWork.WalletRepository.UpdateWalletAsync(wallet);
+                    await NotifyWalletUpdatedAsync(wallet, transaction);
 
                     // Update transaction description with VNPay details
                     transaction.Description = $"{transaction.Description} - Thanh toán thành công qua VNPay (TxnNo: {callback.vnp_TransactionNo})";
@@ -496,6 +506,24 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
                 _ => "Giao dịch thất bại"
             };
         }
+
+        private Task NotifyWalletUpdatedAsync(Wallet wallet, WalletTransaction transaction)
+        {
+            if (wallet == null || transaction == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var payload = new WalletUpdatedPayload
+            {
+                WalletId = wallet.WalletId,
+                NewBalance = wallet.Balance,
+                LastChangeAmount = transaction.Amount,
+                LastChangeType = transaction.TransactionType.ToString(),
+                ChangedAt = transaction.CreatedAt
+            };
+
+            return _realtimeNotifier.NotifyWalletUpdatedAsync(wallet.AccountId, payload);
+        }
     }
 }
-
