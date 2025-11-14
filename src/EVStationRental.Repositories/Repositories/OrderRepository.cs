@@ -26,6 +26,8 @@ namespace EVStationRental.Repositories.Repositories
                 .Include(o => o.Customer)
                 .Include(o => o.Vehicle)
                     .ThenInclude(v => v.Model)
+                .Include(o => o.Vehicle)
+                    .ThenInclude(v => v.Station)
                 .Include(o => o.Promotion)
                 .Include(o => o.Staff)
                 .FirstOrDefaultAsync(o => o.OrderId == orderId);
@@ -36,6 +38,8 @@ namespace EVStationRental.Repositories.Repositories
             return await _context.Orders
                 .Include(o => o.Vehicle)
                     .ThenInclude(v => v.Model)
+                .Include(o => o.Vehicle)
+                    .ThenInclude(v => v.Station)
                 .Include(o => o.Promotion)
                 .Where(o => o.CustomerId == customerId && o.Isactive)
                 .OrderByDescending(o => o.OrderDate)
@@ -143,6 +147,8 @@ namespace EVStationRental.Repositories.Repositories
                 .Include(o => o.Customer)
                 .Include(o => o.Vehicle)
                     .ThenInclude(v => v.Model)
+                .Include(o => o.Vehicle)
+                    .ThenInclude(v => v.Station)
                 .Include(o => o.Promotion)
                 .Include(o => o.Staff)
                 .Include(o => o.Contracts)

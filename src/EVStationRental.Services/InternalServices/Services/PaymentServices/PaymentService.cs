@@ -1,4 +1,5 @@
 using EVStationRental.Common.DTOs.PaymentDTOs;
+using EVStationRental.Common.DTOs.Realtime;
 using EVStationRental.Common.Enums.EnumModel;
 using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Repositories.Models;
@@ -6,6 +7,7 @@ using EVStationRental.Repositories.UnitOfWork;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.ExternalService.IServices;
 using EVStationRental.Services.InternalServices.IServices.IPaymentServices;
+using EVStationRental.Services.Realtime;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -21,17 +23,20 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
         private readonly IVNPayService _vnPayService;
         private readonly DatabasePaymentService _dbPaymentService;
         private readonly ILogger<PaymentService> _logger;
+        private readonly IRealtimeNotifier _realtimeNotifier;
 
         public PaymentService(
             IUnitOfWork unitOfWork, 
             IVNPayService vnPayService, 
             DatabasePaymentService dbPaymentService,
-            ILogger<PaymentService> logger)
+            ILogger<PaymentService> logger,
+            IRealtimeNotifier realtimeNotifier)
         {
             _unitOfWork = unitOfWork;
             _vnPayService = vnPayService;
             _dbPaymentService = dbPaymentService;
             _logger = logger;
+            _realtimeNotifier = realtimeNotifier;
         }
 
         public async Task<IServiceResult> CreatePaymentAsync(CreatePaymentRequestDTO request)
@@ -749,6 +754,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     wallet.Balance -= amountToDeduct;
                     wallet.UpdatedAt = DateTime.Now;
                     await _unitOfWork.WalletRepository.UpdateWalletAsync(wallet);
+                    await NotifyWalletUpdatedAsync(wallet, -amountToDeduct, TransactionType.PAYMENT);
 
                     // Create wallet transaction
                     var walletTransaction = new WalletTransaction
@@ -804,12 +810,16 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     Message = $"Đã trừ {amountToDeduct:N0} VNĐ từ ví thành công"
                 };
 
-                return new ServiceResult
+                var result = new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_UPDATE_CODE,
                     Message = "Hoàn tất thanh toán thành công",
                     Data = response
                 };
+
+                await PublishOrderStatusChangedAsync(order);
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -821,6 +831,42 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     Data = new { error = ex.Message, innerError = ex.InnerException?.Message }
                 };
             }
+        }
+        private Task PublishOrderStatusChangedAsync(Order? order)
+        {
+            return order == null
+                ? Task.CompletedTask
+                : _realtimeNotifier.NotifyOrderStatusChangedAsync(order.CustomerId, new OrderSummaryPayload
+                {
+                    OrderId = order.OrderId,
+                    OrderCode = order.OrderCode,
+                    Status = order.Status.ToString(),
+                    CustomerId = order.CustomerId,
+                    TotalPrice = order.TotalPrice,
+                    StartTime = order.StartTime,
+                    EndTime = order.EndTime ?? order.ReturnTime,
+                    StationName = order.Vehicle?.Station?.Name ?? string.Empty,
+                    VehicleName = order.Vehicle?.Model?.Name ?? string.Empty
+                });
+        }
+
+        private Task NotifyWalletUpdatedAsync(Wallet wallet, decimal changeAmount, TransactionType transactionType)
+        {
+            if (wallet == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var payload = new WalletUpdatedPayload
+            {
+                WalletId = wallet.WalletId,
+                NewBalance = wallet.Balance,
+                LastChangeAmount = changeAmount,
+                LastChangeType = transactionType.ToString(),
+                ChangedAt = DateTime.Now
+            };
+
+            return _realtimeNotifier.NotifyWalletUpdatedAsync(wallet.AccountId, payload);
         }
     }
 }

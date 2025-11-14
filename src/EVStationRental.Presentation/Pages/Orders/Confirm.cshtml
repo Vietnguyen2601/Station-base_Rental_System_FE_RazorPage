@@ -1,0 +1,67 @@
+@page "{id:guid}"
+@model EVStationRental.Presentation.Pages.Orders.ConfirmModel
+@{
+    ViewData["Title"] = "Đặt xe thành công";
+}
+
+<div class="confirm-shell">
+    <partial name="~/Pages/Shared/_Alerts.cshtml" />
+    <div class="confirm-card text-white">
+        <div class="confirm-header d-flex align-items-center gap-3">
+            <div class="confirm-icon">✔</div>
+            <div>
+                <h2 class="mb-1">Đặt xe thành công</h2>
+                <p class="mb-0 text-muted">Vui lòng đến trạm với mã đơn hàng để nhận xe của bạn.</p>
+            </div>
+        </div>
+
+        <div class="confirm-body mt-4">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="text-muted">Mã đơn</label>
+                    <div class="fw-semibold">@Model.Order.OrderCode</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted">Trạm nhận</label>
+                    <div class="fw-semibold">@Model.Order.StationName</div>
+                    <small class="text-muted">@Model.Order.StationAddress</small>
+                </div>
+                <div class="col-md-12">
+                    <label class="text-muted">Thời gian</label>
+                    <div class="fw-semibold">
+                        @Model.Order.StartTime.ToString("HH:mm dd/MM/yyyy") → @Model.Order.EndTime.ToString("HH:mm dd/MM/yyyy")
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="text-muted">Hình thức</label>
+                    <div class="fw-semibold">@Model.Order.PaymentMethodLabel</div>
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <div class="cost-breakdown">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Chi phí tạm tính</span>
+                    <strong>@Model.Order.BasePrice.ToString("n0") ₫</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Ưu đãi thời lượng</span>
+                    <strong class="text-success">-@Model.Order.DiscountAmount.ToString("n0") ₫</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Tổng sau ưu đãi</span>
+                    <strong class="text-primary">@Model.Order.TotalAfterDiscount.ToString("n0") ₫</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Đặt cọc cần thanh toán</span>
+                    <strong>@Model.Order.DepositAmount.ToString("n0") ₫</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a class="btn btn-primary btn-pill" asp-page="/Orders/My">Hoàn tất</a>
+        </div>
+    </div>
+</div>

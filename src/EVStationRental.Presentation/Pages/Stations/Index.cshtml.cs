@@ -1,4 +1,4 @@
-using EVStationRental.Repositories.Models;
+using System.Text.Json;
 using EVStationRental.Services.InternalServices.IServices.IStationServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,24 +21,22 @@ public class IndexModel : PageModel
     public async Task OnGetAsync()
     {
         var result = await _stationService.GetAllStationsAsync();
-        if (result?.Data is IEnumerable<Station> stations)
-        {
-            Items = stations.Select(s => new StationVm
-            {
-                StationId = s.StationId,
-                Name = s.Name,
-                Address = s.Address,
-                Capacity = s.Capacity,
-                Lat = s.Lat,
-                Long = s.Long,
-                IsActive = s.Isactive
-            }).ToList();
-        }
-        else
+        var stations = MapStations(result?.Data);
+        if (!stations.Any())
         {
             TempData["Err"] = result?.Message ?? "Không thể tải danh sách trạm";
-            Items = new List<StationVm>();
         }
+
+        Items = stations.Select(s => new StationVm
+        {
+            StationId = s.StationId,
+            Name = s.Name,
+            Address = s.Address,
+            Capacity = s.Capacity,
+            Lat = s.Lat,
+            Long = s.Long,
+            IsActive = s.Isactive
+        }).ToList();
     }
 
     public async Task<IActionResult> OnPostToggleAsync(Guid id, bool isActive)
@@ -64,5 +62,35 @@ public class IndexModel : PageModel
         public decimal Long { get; set; }
         public int Capacity { get; set; }
         public bool IsActive { get; set; }
+    }
+
+    private static IReadOnlyList<StationSnapshot> MapStations(object? data)
+    {
+        if (data is null)
+        {
+            return Array.Empty<StationSnapshot>();
+        }
+
+        try
+        {
+            var json = JsonSerializer.Serialize(data);
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            return JsonSerializer.Deserialize<List<StationSnapshot>>(json, options) ?? new List<StationSnapshot>();
+        }
+        catch
+        {
+            return Array.Empty<StationSnapshot>();
+        }
+    }
+
+    private sealed record StationSnapshot
+    {
+        public Guid StationId { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Address { get; init; } = string.Empty;
+        public decimal Lat { get; init; }
+        public decimal Long { get; init; }
+        public int Capacity { get; init; }
+        public bool Isactive { get; init; }
     }
 }

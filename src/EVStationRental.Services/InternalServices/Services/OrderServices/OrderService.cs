@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using EVStationRental.Common.DTOs.OrderDTOs;
+using EVStationRental.Common.DTOs.Realtime;
 using EVStationRental.Common.Enums.EnumModel;
 using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Repositories.Mapper;
@@ -10,6 +11,7 @@ using EVStationRental.Repositories.UnitOfWork;
 using EVStationRental.Repositories.IRepositories;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.InternalServices.IServices.IOrderServices;
+using EVStationRental.Services.Realtime;
 
 namespace EVStationRental.Services.InternalServices.Services.OrderServices
 {
@@ -17,11 +19,13 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IOrderRepository _orderRepository;
+        private readonly IRealtimeNotifier _realtimeNotifier;
 
-        public OrderService(IUnitOfWork unitOfWork, IOrderRepository orderRepository)
+        public OrderService(IUnitOfWork unitOfWork, IOrderRepository orderRepository, IRealtimeNotifier realtimeNotifier)
         {
             _unitOfWork = unitOfWork;
             _orderRepository = orderRepository;
+            _realtimeNotifier = realtimeNotifier;
         }
 
         public async Task<IServiceResult> CreateOrderAsync(Guid customerId, CreateOrderRequestDTO request)
@@ -181,13 +185,16 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 var orderWithDetails = await _unitOfWork.OrderRepository.GetOrderByIdAsync(createdOrder.OrderId);
                 
                 var response = orderWithDetails!.ToCreateOrderResponseDTO();
-
-                return new ServiceResult
+                var result = new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_CREATE_CODE,
                     Message = "Đặt xe thành công",
                     Data = response
                 };
+
+                await PublishOrderCreatedAsync(orderWithDetails);
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -223,6 +230,83 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
             }
             
             return new string(code);
+        }
+
+        private async Task<(ServiceResult? Error, Vehicle? Vehicle, VehicleModel? VehicleModel, decimal BasePrice, decimal TotalPrice, Guid? PromotionId)> ValidateAndCalculatePriceAsync(
+            Guid vehicleId,
+            DateTime startTime,
+            DateTime endTime,
+            string? promotionCode)
+        {
+            if (startTime <= DateTime.Now)
+            {
+                return (new ServiceResult
+                {
+                    StatusCode = Const.ERROR_VALIDATION_CODE,
+                    Message = "Thời gian bắt đầu phải sau thời điểm hiện tại"
+                }, null, null, 0, 0, null);
+            }
+
+            if (endTime <= startTime)
+            {
+                return (new ServiceResult
+                {
+                    StatusCode = Const.ERROR_VALIDATION_CODE,
+                    Message = "Thời gian kết thúc phải sau thời gian bắt đầu"
+                }, null, null, 0, 0, null);
+            }
+
+            var vehicle = await _unitOfWork.VehicleRepository.GetVehicleByIdAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return (new ServiceResult
+                {
+                    StatusCode = Const.WARNING_NO_DATA_CODE,
+                    Message = "Xe không tồn tại trong hệ thống"
+                }, null, null, 0, 0, null);
+            }
+
+            var vehicleModel = await _unitOfWork.VehicleModelRepository.GetVehicleModelByIdAsync(vehicle.ModelId);
+            if (vehicleModel == null)
+            {
+                return (new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = "Không tìm thấy thông tin mẫu xe"
+                }, null, null, 0, 0, null);
+            }
+
+            var totalHours = (decimal)(endTime - startTime).TotalHours;
+            var basePrice = CalculateTieredPrice(totalHours, vehicleModel.PricePerHour);
+            var totalPrice = basePrice;
+            Guid? promotionId = null;
+
+            if (!string.IsNullOrWhiteSpace(promotionCode))
+            {
+                var promotion = await _unitOfWork.PromotionRepository.GetByCodeAsync(promotionCode);
+                if (promotion == null)
+                {
+                    return (new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Mã khuyến mãi không tồn tại"
+                    }, null, null, 0, 0, null);
+                }
+
+                if (!promotion.Isactive || DateTime.Now < promotion.StartDate || DateTime.Now > promotion.EndDate)
+                {
+                    return (new ServiceResult
+                    {
+                        StatusCode = Const.ERROR_VALIDATION_CODE,
+                        Message = "Mã khuyến mãi không còn hiệu lực"
+                    }, null, null, 0, 0, null);
+                }
+
+                totalPrice = Math.Round(basePrice * (1 - promotion.DiscountPercentage / 100), 0);
+                promotionId = promotion.PromotionId;
+            }
+
+            return (null, vehicle, vehicleModel, basePrice, totalPrice, promotionId);
         }
 
         /// <summary>
@@ -412,11 +496,15 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     await _unitOfWork.VehicleRepository.UpdateVehicleAsync(vehicle);
                 }
 
-                return new ServiceResult
+                var result = new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_UPDATE_CODE,
                     Message = "Hủy đơn đặt xe thành công"
                 };
+
+                await PublishOrderStatusChangedAsync(order);
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -513,7 +601,7 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     await _unitOfWork.VehicleRepository.UpdateVehicleAsync(vehicle);
                 }
 
-                return new ServiceResult
+                var result = new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_UPDATE_CODE,
                     Message = "Bắt đầu sử dụng xe thành công",
@@ -526,6 +614,10 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                         VehicleId = order.VehicleId
                     }
                 };
+
+                await PublishOrderStatusChangedAsync(order);
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -544,79 +636,22 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
         {
             try
             {
-                // Validate time ranges
-                if (request.StartTime <= DateTime.Now)
+                var calculation = await ValidateAndCalculatePriceAsync(
+                    request.VehicleId,
+                    request.StartTime,
+                    request.EndTime,
+                    request.PromotionCode);
+
+                if (calculation.Error != null)
                 {
-                    return new ServiceResult
-                    {
-                        StatusCode = Const.ERROR_VALIDATION_CODE,
-                        Message = "Thời gian bắt đầu phải sau thời điểm hiện tại"
-                    };
+                    return calculation.Error;
                 }
 
-                if (request.EndTime <= request.StartTime)
-                {
-                    return new ServiceResult
-                    {
-                        StatusCode = Const.ERROR_VALIDATION_CODE,
-                        Message = "Thời gian kết thúc phải sau thời gian bắt đầu"
-                    };
-                }
-
-                // Check vehicle exists
-                var vehicle = await _unitOfWork.VehicleRepository.GetVehicleByIdAsync(request.VehicleId);
-                if (vehicle == null)
-                {
-                    return new ServiceResult
-                    {
-                        StatusCode = Const.WARNING_NO_DATA_CODE,
-                        Message = "Xe không tồn tại trong hệ thống"
-                    };
-                }
-
-                // Get vehicle model to calculate prices
-                var vehicleModel = await _unitOfWork.VehicleModelRepository.GetVehicleModelByIdAsync(vehicle.ModelId);
-                if (vehicleModel == null)
-                {
-                    return new ServiceResult
-                    {
-                        StatusCode = Const.ERROR_EXCEPTION,
-                        Message = "Không tìm thấy thông tin mẫu xe"
-                    };
-                }
-
-                // Calculate prices with tiered discount
-                var totalHours = (decimal)(request.EndTime - request.StartTime).TotalHours;
-                var basePrice = CalculateTieredPrice(totalHours, vehicleModel.PricePerHour);
-                var totalPrice = basePrice;
-                Guid? promotionId = null;
-
-                // Apply promotion if provided
-                if (!string.IsNullOrEmpty(request.PromotionCode))
-                {
-                    var promotion = await _unitOfWork.PromotionRepository.GetByCodeAsync(request.PromotionCode);
-                    
-                    if (promotion == null)
-                    {
-                        return new ServiceResult
-                        {
-                            StatusCode = Const.WARNING_NO_DATA_CODE,
-                            Message = "Mã khuyến mãi không tồn tại"
-                        };
-                    }
-
-                    if (!promotion.Isactive || DateTime.Now < promotion.StartDate || DateTime.Now > promotion.EndDate)
-                    {
-                        return new ServiceResult
-                        {
-                            StatusCode = Const.ERROR_VALIDATION_CODE,
-                            Message = "Mã khuyến mãi không còn hiệu lực"
-                        };
-                    }
-
-                    totalPrice = Math.Round(basePrice * (1 - promotion.DiscountPercentage / 100), 0);
-                    promotionId = promotion.PromotionId;
-                }
+                var vehicle = calculation.Vehicle!;
+                var vehicleModel = calculation.VehicleModel!;
+                var basePrice = calculation.BasePrice;
+                var totalPrice = calculation.TotalPrice;
+                var promotionId = calculation.PromotionId;
 
                 // Calculate deposit (10% of base price) - làm tròn
                 var depositAmount = Math.Round(basePrice * 0.10m, 0);
@@ -675,12 +710,23 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                         : new ContractInfoDTO()
                 };
 
-                return new ServiceResult
+                var result = new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_CREATE_CODE,
                     Message = "Đặt xe thành công. Vui lòng đến trạm với mã đơn hàng để nhận xe.",
                     Data = response
                 };
+
+                await PublishOrderCreatedAsync(createdOrder);
+
+                if (!string.IsNullOrWhiteSpace(request.PaymentMethod) &&
+                    request.PaymentMethod.Equals("WALLET", StringComparison.OrdinalIgnoreCase) &&
+                    depositAmount > 0)
+                {
+                    await NotifyWalletBalanceChangedAsync(customerId, -depositAmount, TransactionType.DEPOSIT);
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -689,6 +735,42 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     StatusCode = Const.ERROR_EXCEPTION,
                     Message = $"Lỗi khi tạo đơn đặt xe: {ex.Message}",
                     Data = new { error = ex.Message, innerError = ex.InnerException?.Message }
+                };
+            }
+        }
+
+        public async Task<IServiceResult> EstimateOrderPriceAsync(Guid vehicleId, DateTime startTime, DateTime endTime, string? promotionCode)
+        {
+            try
+            {
+                var calculation = await ValidateAndCalculatePriceAsync(vehicleId, startTime, endTime, promotionCode);
+                if (calculation.Error != null)
+                {
+                    return calculation.Error;
+                }
+
+                var response = new OrderPriceEstimateDTO
+                {
+                    BasePrice = calculation.BasePrice,
+                    TotalPrice = calculation.TotalPrice,
+                    DiscountAmount = calculation.BasePrice - calculation.TotalPrice,
+                    DepositAmount = Math.Round(calculation.BasePrice * 0.10m, 0),
+                    PromotionId = calculation.PromotionId
+                };
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_READ_CODE,
+                    Message = "Tính giá tạm tính thành công",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi tính giá tạm tính: {ex.Message}"
                 };
             }
         }
@@ -800,7 +882,7 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
 
                 await _unitOfWork.OrderRepository.UpdateOrderAsync(order);
 
-                return new ServiceResult
+                var result = new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_UPDATE_CODE,
                     Message = "Xác nhận đơn hàng thành công. Khách hàng có thể nhận xe.",
@@ -812,6 +894,10 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                         StaffId = staffId
                     }
                 };
+
+                await PublishOrderStatusChangedAsync(order);
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -880,12 +966,16 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     Message = "Cập nhật thời gian trả xe thành công"
                 };
 
-                return new ServiceResult
+                var result = new ServiceResult
                 {
                     StatusCode = Const.SUCCESS_UPDATE_CODE,
                     Message = "Cập nhật thời gian trả xe thành công",
                     Data = response
                 };
+
+                await PublishOrderStatusChangedAsync(order);
+
+                return result;
             }
             catch (Exception ex)
             {
@@ -895,6 +985,55 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                     Message = $"Lỗi khi cập nhật thời gian trả xe: {ex.Message}"
                 };
             }
+        }
+        private Task PublishOrderCreatedAsync(Order? order)
+        {
+            return order == null
+                ? Task.CompletedTask
+                : _realtimeNotifier.NotifyOrderCreatedAsync(order.CustomerId, MapOrderToPayload(order));
+        }
+
+        private Task PublishOrderStatusChangedAsync(Order? order)
+        {
+            return order == null
+                ? Task.CompletedTask
+                : _realtimeNotifier.NotifyOrderStatusChangedAsync(order.CustomerId, MapOrderToPayload(order));
+        }
+
+        private OrderSummaryPayload MapOrderToPayload(Order order)
+        {
+            return new OrderSummaryPayload
+            {
+                OrderId = order.OrderId,
+                OrderCode = order.OrderCode,
+                Status = order.Status.ToString(),
+                CustomerId = order.CustomerId,
+                TotalPrice = order.TotalPrice,
+                StartTime = order.StartTime,
+                EndTime = order.EndTime ?? order.ReturnTime,
+                StationName = order.Vehicle?.Station?.Name ?? string.Empty,
+                VehicleName = order.Vehicle?.Model?.Name ?? string.Empty
+            };
+        }
+
+        private async Task NotifyWalletBalanceChangedAsync(Guid customerId, decimal changeAmount, TransactionType transactionType)
+        {
+            var wallet = await _unitOfWork.WalletRepository.GetByAccountIdAsync(customerId);
+            if (wallet == null)
+            {
+                return;
+            }
+
+            var payload = new WalletUpdatedPayload
+            {
+                WalletId = wallet.WalletId,
+                NewBalance = wallet.Balance,
+                LastChangeAmount = changeAmount,
+                LastChangeType = transactionType.ToString(),
+                ChangedAt = DateTime.Now
+            };
+
+            await _realtimeNotifier.NotifyWalletUpdatedAsync(customerId, payload);
         }
     }
 }

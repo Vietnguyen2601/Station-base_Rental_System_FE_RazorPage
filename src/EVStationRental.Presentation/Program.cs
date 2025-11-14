@@ -3,6 +3,8 @@ using EVStationRental.Repositories.DBContext;
 using EVStationRental.Repositories.IRepositories;
 using EVStationRental.Repositories.Repositories;
 using EVStationRental.Repositories.UnitOfWork;
+using EVStationRental.Presentation.Hubs;
+using EVStationRental.Presentation.Services;
 using EVStationRental.Services.ExternalService.IServices;
 using EVStationRental.Services.ExternalService.Services;
 using EVStationRental.Services.InternalServices.IServices.IAccountServices;
@@ -31,6 +33,7 @@ using EVStationRental.Services.InternalServices.Services.RoleServices;
 using EVStationRental.Services.InternalServices.Services.StationServices;
 using EVStationRental.Services.InternalServices.Services.VehicleServices;
 using EVStationRental.Services.InternalServices.Services.WalletServices;
+using EVStationRental.Services.Realtime;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
@@ -88,11 +91,13 @@ builder.Services.AddScoped<IDamageReportService, DamageReportService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IFeedbackService, FeedbackService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddSignalR();
 builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IRolesServices, RoleServices>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
 builder.Services.AddScoped<DatabasePaymentService>();
+builder.Services.AddScoped<IRealtimeNotifier, RealtimeNotifier>();
 
 // ===== Razor Pages + Antiforgery =====
 builder.Services.AddRazorPages(options =>
@@ -150,5 +155,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapRazorPages();
+app.MapHub<RealtimeHub>("/hubs/realtime");
 
 app.Run();

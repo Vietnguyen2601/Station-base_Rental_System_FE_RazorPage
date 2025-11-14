@@ -19,6 +19,8 @@ namespace EVStationRental.Common.DTOs.OrderDTOs
         public DateTime? ReturnTime { get; set; }
         public decimal BasePrice { get; set; }
         public decimal TotalPrice { get; set; }
+        public string StationName { get; set; } = string.Empty;
+        public string StationAddress { get; set; } = string.Empty;
         public Guid? PromotionId { get; set; }
         public Guid? StaffId { get; set; }
         public DateTime CreatedAt { get; set; }

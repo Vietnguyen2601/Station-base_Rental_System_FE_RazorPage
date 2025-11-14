@@ -18,6 +18,7 @@ namespace EVStationRental.Services.InternalServices.IServices.IOrderServices
 
         // New methods for wallet-based order flow
         Task<IServiceResult> CreateOrderWithWalletDepositAsync(Guid customerId, CreateOrderWithWalletDTO request);
+        Task<IServiceResult> EstimateOrderPriceAsync(Guid vehicleId, DateTime startTime, DateTime endTime, string? promotionCode);
         Task<IServiceResult> VerifyOrderCodeAsync(string orderCode);
         Task<IServiceResult> ConfirmOrderByStaffAsync(Guid orderId, Guid staffId);
     }
