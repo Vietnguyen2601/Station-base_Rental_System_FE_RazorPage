@@ -78,7 +78,7 @@
             return;
         }
 
-        if (isCustomerOrdersPage()) {
+        if (isCustomerOrdersPage() || isStaffOrdersPage()) {
             window.location.reload();
         }
     });
@@ -98,8 +98,10 @@
             if (totalCell && typeof order.totalPrice !== "undefined") {
                 totalCell.textContent = formatCurrency(order.totalPrice);
             }
-        } else if (isCustomerOrdersPage()) {
-            window.location.reload();
+        } else {
+            if (isCustomerOrdersPage() || isStaffOrdersPage()) {
+                window.location.reload();
+            }
         }
 
         if (isStaffOrdersPage()) {
@@ -107,8 +109,6 @@
             if (staffRow) {
                 const statusCell = staffRow.querySelector("[data-order-status]");
                 updateOrderStatusDisplay(statusCell, order.status);
-            } else {
-                window.location.reload();
             }
         }
     });

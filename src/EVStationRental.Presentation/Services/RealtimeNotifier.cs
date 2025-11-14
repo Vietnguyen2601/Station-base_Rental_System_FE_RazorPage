@@ -23,7 +23,10 @@ public sealed class RealtimeNotifier : IRealtimeNotifier
         SendAsync(RealtimeGroups.UserPrefix + accountId, "WalletUpdated", payload);
 
     public Task NotifyOrderCreatedAsync(Guid accountId, OrderSummaryPayload payload) =>
-        SendAsync(RealtimeGroups.UserPrefix + accountId, "OrderCreated", payload);
+        Task.WhenAll(
+            SendAsync(RealtimeGroups.UserPrefix + accountId, "OrderCreated", payload),
+            SendAsync(RealtimeGroups.StaffGroup, "OrderCreated", payload)
+        );
 
     public Task NotifyOrderStatusChangedAsync(Guid accountId, OrderSummaryPayload payload) =>
         Task.WhenAll(
