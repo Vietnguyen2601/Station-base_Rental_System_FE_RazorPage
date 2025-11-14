@@ -5,43 +5,247 @@
     Layout = "~/Pages/Staff/Shared/_StaffLayout.cshtml";
 }
 
+@if (TempData["Ok"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Ok"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Err"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Err"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold">Danh sách xe</h5>
+        <h5 class="mb-0 fw-bold">
+            <i class="bi bi-ev-front-fill"></i> Danh sách xe
+        </h5>
         <div class="d-flex gap-2">
-            <input type="text" class="form-control" placeholder="Tìm kiếm xe..." style="min-width: 250px;">
-            <button class="btn btn-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg"
-                    viewBox="0 0 16 16">
-                    <path fill-rule="evenodd"
-                        d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2" />
-                </svg>
-                Thêm xe mới
+            <form method="get" class="d-flex gap-2">
+                <input type="text" name="SearchTerm" value="@Model.SearchTerm" class="form-control"
+                    placeholder="Tìm kiếm xe..." style="min-width: 250px;">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                <i class="bi bi-plus-lg"></i> Thêm xe mới
             </button>
         </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
                     <tr>
                         <th>Mã xe</th>
                         <th>Mẫu xe</th>
-                        <th>Biển số</th>
+                        <th>Hãng</th>
                         <th>Trạm</th>
                         <th>Trạng thái</th>
-                        <th>Pin (%)</th>
-                        <th>Thao tác</th>
+                        <th>Pin</th>
+                        <th>Màu</th>
+                        <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
-                            Chưa có xe nào
-                        </td>
-                    </tr>
+                    @if (Model.Vehicles.Any())
+                    {
+                        @foreach (var vehicle in Model.Vehicles)
+                        {
+                            <tr>
+                                <td class="fw-bold text-primary">@vehicle.SerialNumber</td>
+                                <td>@vehicle.ModelName</td>
+                                <td>@vehicle.Manufacturer</td>
+                                <td>@(vehicle.StationName ?? "Chưa gán")</td>
+                                <td>
+                                    @if (vehicle.Status == "AVAILABLE")
+                                    {
+                                        <span class="badge bg-success">Sẵn sàng</span>
+                                    }
+                                    else if (vehicle.Status == "RENTING")
+                                    {
+                                        <span class="badge bg-primary">Đang thuê</span>
+                                    }
+                                    else if (vehicle.Status == "MAINTENANCE")
+                                    {
+                                        <span class="badge bg-warning text-dark">Bảo trì</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@vehicle.Status</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (vehicle.BatteryLevel.HasValue)
+                                    {
+                                        <div class="progress" style="width: 80px; height: 20px;">
+                                            <div class="progress-bar @(vehicle.BatteryLevel.Value > 50 ? "bg-success" : vehicle.BatteryLevel.Value > 20 ? "bg-warning" : "bg-danger")"
+                                                role="progressbar" style="width: @vehicle.BatteryLevel.Value%">
+                                                @vehicle.BatteryLevel.Value%
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">N/A</span>
+                                    }
+                                </td>
+                                <td>@(vehicle.Color ?? "N/A")</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                        data-bs-target="#editModal"
+                                        onclick="loadEditData('@vehicle.VehicleId', '@vehicle.BatteryLevel', '@vehicle.Color', '@vehicle.Img')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@vehicle.VehicleId"
+                                        class="d-inline" onsubmit="return confirm('Xác nhận xóa xe @vehicle.SerialNumber?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">
+                                @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                                {
+                                    <span>Không tìm thấy xe phù hợp</span>
+                                }
+                                else
+                                {
+                                    <span>Chưa có xe nào</span>
+                                }
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Thêm xe mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="CreateVehicleDto.SerialNumber" class="form-label">
+                                Số serial <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="CreateVehicleDto.SerialNumber" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CreateVehicleDto.ModelId" class="form-label">
+                                Mẫu xe <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="CreateVehicleDto.ModelId" asp-items="Model.VehicleModels"
+                                class="form-select" required>
+                                <option value="">-- Chọn mẫu xe --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CreateVehicleDto.StationId" class="form-label">Trạm</label>
+                            <select asp-for="CreateVehicleDto.StationId" asp-items="Model.Stations" class="form-select">
+                                <option value="">-- Chọn trạm (tùy chọn) --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CreateVehicleDto.BatteryLevel" class="form-label">Pin (%)</label>
+                            <input asp-for="CreateVehicleDto.BatteryLevel" type="number" min="0" max="100"
+                                class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CreateVehicleDto.Color" class="form-label">Màu sắc</label>
+                            <input asp-for="CreateVehicleDto.Color" class="form-control" />
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="CreateVehicleDto.Img" class="form-label">URL hình ảnh</label>
+                            <input asp-for="CreateVehicleDto.Img" type="url" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Update">
+                <input type="hidden" asp-for="VehicleIdToUpdate" id="editVehicleId" />
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Cập nhật xe</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="UpdateVehicleDto.BatteryLevel" class="form-label">Pin (%)</label>
+                            <input asp-for="UpdateVehicleDto.BatteryLevel" type="number" min="0" max="100"
+                                class="form-control" id="editBatteryLevel" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="UpdateVehicleDto.Color" class="form-label">Màu sắc</label>
+                            <input asp-for="UpdateVehicleDto.Color" class="form-control" id="editColor" />
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="UpdateVehicleDto.Img" class="form-label">URL hình ảnh</label>
+                            <input asp-for="UpdateVehicleDto.Img" type="url" class="form-control" id="editImg" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-save"></i> Cập nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function loadEditData(vehicleId, batteryLevel, color, img) {
+            document.getElementById('editVehicleId').value = vehicleId;
+            document.getElementById('editBatteryLevel').value = batteryLevel || '';
+            document.getElementById('editColor').value = color || '';
+            document.getElementById('editImg').value = img || '';
+        }
+
+        setTimeout(function () {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function (alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 3000);
+    </script>
+}
