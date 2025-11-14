@@ -9,12 +9,12 @@
     var statusTotal = Math.Max(1, actualStatusTotal);
     var statusBreakdown = new[]
     {
-        new { Label = "Chờ xử lý", Count = summary.Pending, Color = "#f59e0b" },
-        new { Label = "Đã xác nhận", Count = summary.Confirmed, Color = "#0ea5e9" },
-        new { Label = "Đang thuê", Count = summary.Ongoing, Color = "#6366f1" },
-        new { Label = "Hoàn thành", Count = summary.Completed, Color = "#22c55e" },
-        new { Label = "Đã huỷ", Count = summary.Canceled, Color = "#ef4444" }
-    };
+new { Label = "Chờ xử lý", Count = summary.Pending, Color = "#f59e0b" },
+new { Label = "Đã xác nhận", Count = summary.Confirmed, Color = "#0ea5e9" },
+new { Label = "Đang thuê", Count = summary.Ongoing, Color = "#6366f1" },
+new { Label = "Hoàn thành", Count = summary.Completed, Color = "#22c55e" },
+new { Label = "Đã huỷ", Count = summary.Canceled, Color = "#ef4444" }
+};
     decimal offset = 0;
     var donutSegments = statusBreakdown.Select(segment =>
     {
@@ -32,7 +32,6 @@
     <div class="admin-content">
         <div class="page-card mb-4">
             <h1 class="mb-1">Tổng quan hệ thống</h1>
-            <p class="text-muted mb-3">Khoảng thời gian: @summary.FilterDescription</p>
             @await Html.PartialAsync("~/Pages/Shared/_DashboardFilter.cshtml", Model.FilterVm)
         </div>
 
@@ -96,7 +95,8 @@
                     <div class="chart-bars">
                         @foreach (var station in topStationsForBars)
                         {
-                            var percent = summary.TotalRevenue > 0 ? (double)(station.TotalRevenue / summary.TotalRevenue * 100) : 0;
+                            var percent = summary.TotalRevenue > 0 ? (double)(station.TotalRevenue / summary.TotalRevenue * 100)
+                            : 0;
                             var width = percent <= 0 ? 5 : Math.Min(percent, 100);
                             <div class="chart-bar">
                                 <div class="chart-bar__label">
@@ -132,24 +132,24 @@
                         </tr>
                     </thead>
                     <tbody>
-                    @if (!Model.TopStations.Any())
-                    {
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-4">Chưa có dữ liệu.</td>
-                        </tr>
-                    }
-                    else
-                    {
-                        foreach (var station in Model.TopStations)
+                        @if (!Model.TopStations.Any())
                         {
                             <tr>
-                                <td>@station.StationName</td>
-                                <td class="text-end">@station.TotalOrders</td>
-                                <td class="text-end">@station.CompletedOrders</td>
-                                <td class="text-end">@station.TotalRevenue.ToString("n0") đ</td>
+                                <td colspan="4" class="text-center text-muted py-4">Chưa có dữ liệu.</td>
                             </tr>
                         }
-                    }
+                        else
+                        {
+                            foreach (var station in Model.TopStations)
+                            {
+                                <tr>
+                                    <td>@station.StationName</td>
+                                    <td class="text-end">@station.TotalOrders</td>
+                                    <td class="text-end">@station.CompletedOrders</td>
+                                    <td class="text-end">@station.TotalRevenue.ToString("n0") đ</td>
+                                </tr>
+                            }
+                        }
                     </tbody>
                 </table>
             </div>
