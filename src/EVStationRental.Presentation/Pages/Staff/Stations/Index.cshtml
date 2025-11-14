@@ -5,40 +5,342 @@
     Layout = "~/Pages/Staff/Shared/_StaffLayout.cshtml";
 }
 
+@if (TempData["Ok"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill"></i> @TempData["Ok"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+@if (TempData["Err"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> @TempData["Err"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
-        <h5 class="mb-0 fw-bold">Danh sách trạm</h5>
+        <h5 class="mb-0 fw-bold">
+            <i class="bi bi-geo-alt-fill"></i> Danh sách trạm
+        </h5>
         <div class="d-flex gap-2">
-            <input type="text" class="form-control" placeholder="Tìm kiếm trạm..." style="min-width: 250px;">
-            <button class="btn btn-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-lg" viewBox="0 0 16 16">
-                    <path fill-rule="evenodd" d="M8 2a.5.5 0 0 1 .5.5v5h5a.5.5 0 0 1 0 1h-5v5a.5.5 0 0 1-1 0v-5h-5a.5.5 0 0 1 0-1h5v-5A.5.5 0 0 1 8 2"/>
-                </svg>
-                Thêm trạm mới
+            <form method="get" class="d-flex gap-2">
+                <input type="text" name="SearchTerm" value="@Model.SearchTerm" class="form-control"
+                    placeholder="Tìm kiếm trạm..." style="min-width: 250px;">
+                <button type="submit" class="btn btn-outline-primary">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                <i class="bi bi-plus-lg"></i> Thêm trạm
             </button>
         </div>
     </div>
     <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
                     <tr>
-                        <th>Mã trạm</th>
                         <th>Tên trạm</th>
                         <th>Địa chỉ</th>
-                        <th>Số xe</th>
-                        <th>Trạng thái</th>
-                        <th>Thao tác</th>
+                        <th>Tọa độ</th>
+                        <th>Sức chứa</th>
+                        <th>Xe hiện có</th>
+                        <th class="text-center">Thao tác</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-5">
-                            Chưa có trạm nào
-                        </td>
-                    </tr>
+                    @if (Model.Stations.Any())
+                    {
+                        @foreach (var station in Model.Stations)
+                        {
+                            <tr>
+                                <td>
+                                    <strong class="text-primary">@station.Name</strong>
+                                </td>
+                                <td>@station.Address</td>
+                                <td>
+                                    <small class="text-muted">
+                                        <i class="bi bi-pin-map"></i> @station.Lat.ToString("F6"), @station.Long.ToString("F6")
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@station.Capacity chỗ</span>
+                                </td>
+                                <td>
+                                    <span class="badge @(station.AvailableVehicleCount > 0 ? "bg-success" : "bg-secondary")">
+                                        @station.AvailableVehicleCount xe
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal"
+                                        data-bs-target="#addVehiclesModal"
+                                        onclick="setStationForVehicles('@station.StationId', '@station.Name')">
+                                        <i class="bi bi-plus-circle"></i> Thêm xe
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                                        data-bs-target="#editModal"
+                                        onclick="loadEditData('@station.StationId', '@station.Name', '@station.Address', '@station.Lat', '@station.Long', '@station.Capacity')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@station.StationId"
+                                        class="d-inline" onsubmit="return confirm('Xác nhận xóa trạm @station.Name?')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-5">
+                                @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+                                {
+                                    <span>Không tìm thấy trạm phù hợp</span>
+                                }
+                                else
+                                {
+                                    <span>Chưa có trạm nào</span>
+                                }
+                            </td>
+                        </tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<!-- Create Modal -->
+<div class="modal fade" id="createModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Thêm trạm mới</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="CreateStationDto.Name" class="form-label">
+                                Tên trạm <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="CreateStationDto.Name" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CreateStationDto.Capacity" class="form-label">
+                                Sức chứa <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="CreateStationDto.Capacity" type="number" min="0" class="form-control"
+                                required />
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="CreateStationDto.Address" class="form-label">
+                                Địa chỉ <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="CreateStationDto.Address" class="form-control" required />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CreateStationDto.Lat" class="form-label">
+                                Vĩ độ (Latitude) <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="CreateStationDto.Lat" type="number" step="0.000001" class="form-control"
+                                required />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="CreateStationDto.Long" class="form-label">
+                                Kinh độ (Longitude) <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="CreateStationDto.Long" type="number" step="0.000001" class="form-control"
+                                required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Lưu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Update">
+                <input type="hidden" asp-for="StationIdToUpdate" id="editStationId" />
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="bi bi-pencil-square"></i> Cập nhật trạm</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="UpdateStationDto.Name" class="form-label">Tên trạm</label>
+                            <input asp-for="UpdateStationDto.Name" class="form-control" id="editName" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="UpdateStationDto.Capacity" class="form-label">Sức chứa</label>
+                            <input asp-for="UpdateStationDto.Capacity" type="number" min="0" class="form-control"
+                                id="editCapacity" />
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="UpdateStationDto.Address" class="form-label">Địa chỉ</label>
+                            <input asp-for="UpdateStationDto.Address" class="form-control" id="editAddress" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="UpdateStationDto.Lat" class="form-label">Vĩ độ (Latitude)</label>
+                            <input asp-for="UpdateStationDto.Lat" type="number" step="0.000001" class="form-control"
+                                id="editLat" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="UpdateStationDto.Long" class="form-label">Kinh độ (Longitude)</label>
+                            <input asp-for="UpdateStationDto.Long" type="number" step="0.000001" class="form-control"
+                                id="editLong" />
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="UpdateStationDto.ImageUrl" class="form-label">URL hình ảnh</label>
+                            <input asp-for="UpdateStationDto.ImageUrl" type="url" class="form-control"
+                                id="editImageUrl" />
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="editIsactive" />
+                                <label class="form-check-label" for="editIsactive">
+                                    Hoạt động
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-save"></i> Cập nhật
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Vehicles Modal -->
+<div class="modal fade" id="addVehiclesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="AddVehicles">
+                <input type="hidden" asp-for="AddVehiclesDto.StationId" id="vehicleStationId" />
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-plus-circle"></i> Thêm xe vào trạm: <span id="stationNameDisplay"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Vehicle IDs <span class="text-danger">*</span>
+                        </label>
+                        <textarea id="vehicleIdsInput" class="form-control" rows="4"
+                            placeholder="Nhập các Vehicle ID (GUID), mỗi ID trên một dòng" required></textarea>
+                        <small class="text-muted">Mỗi GUID trên một dòng riêng</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-success" onclick="return prepareVehicleIds()">
+                        <i class="bi bi-save"></i> Thêm xe
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function loadEditData(stationId, name, address, lat, long, capacity) {
+            document.getElementById('editStationId').value = stationId;
+            document.getElementById('editName').value = name;
+            document.getElementById('editAddress').value = address;
+            document.getElementById('editLat').value = lat;
+            document.getElementById('editLong').value = long;
+            document.getElementById('editCapacity').value = capacity;
+        }
+
+        // Handle form submission to include checkbox value
+        document.addEventListener('DOMContentLoaded', function() {
+            const editForm = document.querySelector('form[asp-page-handler="Update"]');
+            if (editForm) {
+                editForm.addEventListener('submit', function(e) {
+                    const checkbox = document.getElementById('editIsactive');
+                    
+                    // Remove existing hidden input if any
+                    const existingInput = editForm.querySelector('input[name="UpdateStationDto.Isactive"]');
+                    if (existingInput) {
+                        existingInput.remove();
+                    }
+                    
+                    // Add hidden input with checkbox value
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'UpdateStationDto.Isactive';
+                    hiddenInput.value = checkbox.checked;
+                    editForm.appendChild(hiddenInput);
+                });
+            }
+        });
+
+        function setStationForVehicles(stationId, stationName) {
+            document.getElementById('vehicleStationId').value = stationId;
+            document.getElementById('stationNameDisplay').textContent = stationName;
+            document.getElementById('vehicleIdsInput').value = '';
+        }
+
+        function prepareVehicleIds() {
+            const textarea = document.getElementById('vehicleIdsInput');
+            const vehicleIds = textarea.value.split('\n')
+                .map(id => id.trim())
+                .filter(id => id.length > 0);
+
+            if (vehicleIds.length === 0) {
+                alert('Vui lòng nhập ít nhất một Vehicle ID');
+                return false;
+            }
+
+            // Create hidden inputs for each vehicle ID
+            const form = textarea.closest('form');
+            const existingInputs = form.querySelectorAll('input[name^="AddVehiclesDto.VehicleIds"]');
+            existingInputs.forEach(input => input.remove());
+
+            vehicleIds.forEach((id, index) => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = `AddVehiclesDto.VehicleIds[${index}]`;
+                input.value = id;
+                form.appendChild(input);
+            });
+
+            return true;
+        }
+
+        setTimeout(function () {
+            var alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function (alert) {
+                var bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 3000);
+    </script>
+}

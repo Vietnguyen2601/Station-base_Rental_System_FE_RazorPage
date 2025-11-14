@@ -47,9 +47,27 @@ public class IndexModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string SortOrder { get; set; } = "newest";
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
-        await LoadDataAsync();
+        await LoadAccountsAndVehiclesAsync();
+
+        // Check if searching by order code
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            var result = await _orderService.GetOrderByOrderCodeAsync(SearchQuery.Trim());
+            if (result.StatusCode == 200 && result.Data is ViewOrderResponseDTO order)
+            {
+                // Redirect directly to details page when found
+                return RedirectToPage("/Staff/Orders/Details", new { id = order.OrderId });
+            }
+            else
+            {
+                TempData["Err"] = $"Không tìm thấy đơn hàng với mã: {SearchQuery}";
+            }
+        }
+
+        await LoadOrdersAsync();
+        return Page();
     }
 
     public async Task<IActionResult> OnPostSearchAsync()
@@ -62,14 +80,15 @@ public class IndexModel : PageModel
             return Page();
         }
 
-        var result = await _orderService.GetOrderByOrderCodeAsync(SearchQuery);
+        var result = await _orderService.GetOrderByOrderCodeAsync(SearchQuery.Trim());
         if (result.StatusCode == 200 && result.Data is ViewOrderResponseDTO order)
         {
-            Orders = new List<ViewOrderResponseDTO> { order };
+            // Redirect directly to details page when found
+            return RedirectToPage("/Staff/Orders/Details", new { id = order.OrderId });
         }
         else
         {
-            TempData["Err"] = result.Message ?? "Không tìm thấy đơn hàng";
+            TempData["Err"] = $"Không tìm thấy đơn hàng với mã: {SearchQuery}";
             await LoadOrdersAsync();
         }
 
