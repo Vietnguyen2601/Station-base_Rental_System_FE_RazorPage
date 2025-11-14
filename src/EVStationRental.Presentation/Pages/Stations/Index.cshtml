@@ -27,7 +27,7 @@ else
             <tbody>
             @foreach (var station in Model.Items)
             {
-                <tr>
+                <tr data-station-id="@station.StationId">
                     <td>@station.Name</td>
                     <td>@station.Address</td>
                     <td class="text-center">@station.Capacity</td>
@@ -35,7 +35,7 @@ else
                         <span class="text-muted">@station.Lat , @station.Long</span>
                     </td>
                     <td class="text-center">
-                        <span class="badge @(station.IsActive ? "bg-success" : "bg-secondary")">
+                        <span class="badge @(station.IsActive ? "bg-success" : "bg-secondary")" data-station-status>
                             @(station.IsActive ? "Đang hoạt động" : "Tạm dừng")
                         </span>
                     </td>

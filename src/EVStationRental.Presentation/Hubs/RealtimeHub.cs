@@ -22,6 +22,11 @@ public class RealtimeHub : Hub
             await Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.AdminGroup);
         }
 
+        if (Context.User?.IsInRole("Staff") == true || Context.User?.IsInRole("Admin") == true)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, RealtimeGroups.StaffGroup);
+        }
+
         await base.OnConnectedAsync();
     }
 

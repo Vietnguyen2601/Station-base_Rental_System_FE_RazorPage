@@ -26,7 +26,19 @@ public sealed class RealtimeNotifier : IRealtimeNotifier
         SendAsync(RealtimeGroups.UserPrefix + accountId, "OrderCreated", payload);
 
     public Task NotifyOrderStatusChangedAsync(Guid accountId, OrderSummaryPayload payload) =>
-        SendAsync(RealtimeGroups.UserPrefix + accountId, "OrderStatusChanged", payload);
+        Task.WhenAll(
+            SendAsync(RealtimeGroups.UserPrefix + accountId, "OrderStatusChanged", payload),
+            SendAsync(RealtimeGroups.StaffGroup, "OrderStatusChanged", payload)
+        );
+
+    public Task NotifyOrderUpdatedByStaffAsync(OrderStaffUpdatePayload payload) =>
+        SendAsync(RealtimeGroups.StaffGroup, "OrderUpdatedByStaff", payload);
+
+    public Task NotifyVehicleUpdatedAsync(VehicleUpdatedPayload payload) =>
+        SendAsync(RealtimeGroups.StaffGroup, "VehicleUpdated", payload);
+
+    public Task NotifyStationUpdatedAsync(StationUpdatedPayload payload) =>
+        SendAsync(RealtimeGroups.StaffGroup, "StationUpdated", payload);
 
     public Task NotifyAccountChangedAsync(AccountSummaryPayload payload) =>
         SendAsync(RealtimeGroups.AdminGroup, "AccountChanged", payload);

@@ -131,7 +131,7 @@
                     {
                         @foreach (var order in Model.Orders)
                         {
-                            <tr>
+                            <tr data-order-id="@order.OrderId">
                                 <td>
                                     <strong>@order.OrderCode</strong>
                                 </td>
@@ -178,7 +178,7 @@
                                         }
                                     </small>
                                 </td>
-                                <td>
+                                <td class="text-center" data-order-status>
                                     @switch (order.Status)
                                     {
                                         case EVStationRental.Common.Enums.EnumModel.OrderStatus.PENDING:

@@ -616,6 +616,7 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 };
 
                 await PublishOrderStatusChangedAsync(order);
+                await PublishOrderStaffActionAsync(order, "START");
 
                 return result;
             }
@@ -896,6 +897,7 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 };
 
                 await PublishOrderStatusChangedAsync(order);
+                await PublishOrderStaffActionAsync(order, "CONFIRM");
 
                 return result;
             }
@@ -974,6 +976,7 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
                 };
 
                 await PublishOrderStatusChangedAsync(order);
+                await PublishOrderStaffActionAsync(order, "CHECKOUT");
 
                 return result;
             }
@@ -1034,6 +1037,25 @@ namespace EVStationRental.Services.InternalServices.Services.OrderServices
             };
 
             await _realtimeNotifier.NotifyWalletUpdatedAsync(customerId, payload);
+        }
+
+        private Task PublishOrderStaffActionAsync(Order? order, string action)
+        {
+            if (order == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var payload = new OrderStaffUpdatePayload
+            {
+                OrderId = order.OrderId,
+                Action = action,
+                NewStatus = order.Status.ToString(),
+                StaffId = order.StaffId,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            return _realtimeNotifier.NotifyOrderUpdatedByStaffAsync(payload);
         }
     }
 }
