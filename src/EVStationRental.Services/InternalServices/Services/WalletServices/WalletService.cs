@@ -22,18 +22,14 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
         private readonly ILogger<WalletService> _logger;
         private readonly IVNPayService _vnpayService;
         private readonly IPayOSService _payosService;
-
-        public WalletService(
-            IUnitOfWork unitOfWork, 
-            ILogger<WalletService> logger, 
-            IVNPayService vnpayService,
-            IPayOSService payosService)
         private readonly IRealtimeNotifier _realtimeNotifier;
+
 
         public WalletService(
             IUnitOfWork unitOfWork,
             ILogger<WalletService> logger,
             IVNPayService vnpayService,
+            IPayOSService payosService,
             IRealtimeNotifier realtimeNotifier)
         {
             _unitOfWork = unitOfWork;
