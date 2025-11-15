@@ -96,6 +96,7 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IRolesServices, RoleServices>();
 builder.Services.AddScoped<IVNPayService, VNPayService>();
+builder.Services.AddScoped<IPayOSService, PayOSService>();
 builder.Services.AddScoped<DatabasePaymentService>();
 builder.Services.AddScoped<IRealtimeNotifier, RealtimeNotifier>();
 

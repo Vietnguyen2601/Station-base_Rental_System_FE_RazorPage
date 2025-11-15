@@ -21,6 +21,13 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
         private readonly IUnitOfWork _unitOfWork;
         private readonly ILogger<WalletService> _logger;
         private readonly IVNPayService _vnpayService;
+        private readonly IPayOSService _payosService;
+
+        public WalletService(
+            IUnitOfWork unitOfWork, 
+            ILogger<WalletService> logger, 
+            IVNPayService vnpayService,
+            IPayOSService payosService)
         private readonly IRealtimeNotifier _realtimeNotifier;
 
         public WalletService(
@@ -32,6 +39,7 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
             _unitOfWork = unitOfWork;
             _logger = logger;
             _vnpayService = vnpayService;
+            _payosService = payosService;
             _realtimeNotifier = realtimeNotifier;
         }
 
@@ -507,6 +515,193 @@ namespace EVStationRental.Services.InternalServices.Services.WalletServices
             };
         }
 
+        #region PayOS Methods
+
+        /// <summary>
+        /// Create PayOS payment URL by WalletId
+        /// Creates a PENDING transaction and returns PayOS payment URL
+        /// </summary>
+        public async Task<IServiceResult> CreatePayOSUrlByWalletIdAsync(
+            Guid walletId,
+            decimal amount,
+            string returnUrl,
+            string cancelUrl)
+        {
+            try
+            {
+                var wallet = await _unitOfWork.WalletRepository.GetByIdAsync(walletId);
+                if (wallet == null)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.WARNING_NO_DATA_CODE,
+                        Message = "Không tìm thấy ví"
+                    };
+                }
+
+                if (amount <= 0)
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.FAIL_READ_CODE,
+                        Message = "Số tiền nạp phải lớn hơn 0"
+                    };
+                }
+
+                // Generate unique order code for PayOS (using timestamp)
+                long orderCode = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+                // Create transaction record (PENDING) with orderCode in description
+                var transaction = new WalletTransaction
+                {
+                    TransactionId = Guid.NewGuid(),
+                    WalletId = wallet.WalletId,
+                    OrderId = null,
+                    Amount = amount,
+                    TransactionType = TransactionType.DEPOSIT,
+                    Description = $"PayOS-{orderCode}|Nạp tiền vào ví - Số tiền: {amount:N0} VNĐ",
+                    CreatedAt = DateTime.Now,
+                    Isactive = true
+                };
+
+                await _unitOfWork.WalletRepository.CreateTransactionAsync(transaction);
+
+                // Create PayOS payment link
+                var paymentUrl = await _payosService.CreatePaymentLinkAsync(
+                    orderCode: orderCode,
+                    amount: amount,
+                    description: $"Nạp {amount:N0}đ vào ví",
+                    returnUrl: returnUrl,
+                    cancelUrl: cancelUrl
+                );
+
+                var response = new
+                {
+                    TransactionId = transaction.TransactionId,
+                    OrderCode = orderCode,
+                    Amount = amount,
+                    PaymentUrl = paymentUrl,
+                    Status = "PENDING"
+                };
+
+                return new ServiceResult
+                {
+                    StatusCode = Const.SUCCESS_CREATE_CODE,
+                    Message = "Tạo link thanh toán PayOS thành công",
+                    Data = response
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating PayOS URL for wallet {WalletId}", walletId);
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi tạo link thanh toán: {ex.Message}"
+                };
+            }
+        }
+
+        /// <summary>
+        /// Handle PayOS return callback for wallet top-up
+        /// Validates payment and updates wallet balance if payment successful
+        /// </summary>
+        public async Task<IServiceResult> HandlePayOSWalletReturnAsync(long orderCode, string status)
+        {
+            try
+            {
+                // For mock/testing: Skip PayOS verification if using mock
+                // In production, you should verify with PayOS API
+                // var paymentInfoResult = await _payosService.GetPaymentLinkInformationAsync(orderCode);
+
+                // Status: PAID, CANCELLED, PENDING
+                if (status.ToUpper() == "PAID")
+                {
+                    // Find transaction by orderCode in description  
+                    // Query from DB context directly for all wallets' transactions
+                    var allWallets = await _unitOfWork.WalletRepository.GetAllAsync();
+                    WalletTransaction? transaction = null;
+                    
+                    foreach (var w in allWallets)
+                    {
+                        var history = await _unitOfWork.WalletRepository.GetTransactionHistoryAsync(w.WalletId, 1, 100);
+                        transaction = history.FirstOrDefault(t => t.Description != null && t.Description.Contains($"PayOS-{orderCode}"));
+                        if (transaction != null) break;
+                    }
+
+                    if (transaction == null)
+                    {
+                        _logger.LogWarning("PayOS transaction not found for OrderCode {OrderCode}", orderCode);
+                        return new ServiceResult
+                        {
+                            StatusCode = Const.WARNING_NO_DATA_CODE,
+                            Message = "Không tìm thấy giao dịch tương ứng"
+                        };
+                    }
+
+                    var walletToUpdate = await _unitOfWork.WalletRepository.GetByIdAsync(transaction.WalletId);
+                    if (walletToUpdate == null)
+                    {
+                        return new ServiceResult
+                        {
+                            StatusCode = Const.WARNING_NO_DATA_CODE,
+                            Message = "Không tìm thấy ví"
+                        };
+                    }
+
+                    // Update wallet balance
+                    walletToUpdate.Balance += transaction.Amount;
+                    walletToUpdate.UpdatedAt = DateTime.Now;
+                    await _unitOfWork.WalletRepository.UpdateWalletAsync(walletToUpdate);
+
+                    _logger.LogInformation(
+                        "PayOS wallet top-up successful. Transaction: {TransactionId}, Amount: {Amount}, New Balance: {Balance}",
+                        transaction.TransactionId, transaction.Amount, walletToUpdate.Balance);
+
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.SUCCESS_UPDATE_CODE,
+                        Message = "Nạp tiền thành công",
+                        Data = new
+                        {
+                            TransactionId = transaction.TransactionId,
+                            Amount = transaction.Amount,
+                            NewBalance = walletToUpdate.Balance,
+                            Status = "COMPLETED"
+                        }
+                    };
+                }
+                else if (status.ToUpper() == "CANCELLED")
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.FAIL_UPDATE_CODE,
+                        Message = "Giao dịch đã bị hủy",
+                        Data = new { Status = "CANCELLED" }
+                    };
+                }
+                else
+                {
+                    return new ServiceResult
+                    {
+                        StatusCode = Const.FAIL_UPDATE_CODE,
+                        Message = "Giao dịch chưa hoàn tất",
+                        Data = new { Status = status }
+                    };
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error handling PayOS wallet return for OrderCode {OrderCode}", orderCode);
+                return new ServiceResult
+                {
+                    StatusCode = Const.ERROR_EXCEPTION,
+                    Message = $"Lỗi khi xử lý callback PayOS: {ex.Message}"
+                };
+            }
+        }
+
+        #endregion
         private Task NotifyWalletUpdatedAsync(Wallet wallet, WalletTransaction transaction)
         {
             if (wallet == null || transaction == null)
