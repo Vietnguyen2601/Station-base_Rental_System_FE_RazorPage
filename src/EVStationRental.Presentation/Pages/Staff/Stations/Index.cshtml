@@ -57,7 +57,7 @@
                     {
                         @foreach (var station in Model.Stations)
                         {
-                            <tr>
+                            <tr data-station-id="@station.StationId">
                                 <td>
                                     <strong class="text-primary">@station.Name</strong>
                                 </td>

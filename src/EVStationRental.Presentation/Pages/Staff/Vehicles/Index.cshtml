@@ -59,12 +59,12 @@
                     {
                         @foreach (var vehicle in Model.Vehicles)
                         {
-                            <tr>
+                            <tr data-vehicle-id="@vehicle.VehicleId">
                                 <td class="fw-bold text-primary">@vehicle.SerialNumber</td>
                                 <td>@vehicle.ModelName</td>
                                 <td>@vehicle.Manufacturer</td>
                                 <td>@(vehicle.StationName ?? "Chưa gán")</td>
-                                <td>
+                                <td data-vehicle-status>
                                     @if (vehicle.Status == "AVAILABLE")
                                     {
                                         <span class="badge bg-success">Sẵn sàng</span>

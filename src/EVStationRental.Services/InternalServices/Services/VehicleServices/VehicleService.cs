@@ -1,10 +1,12 @@
-﻿using EVStationRental.Common.DTOs.VehicleDTOs;
+﻿using EVStationRental.Common.DTOs.Realtime;
+using EVStationRental.Common.DTOs.VehicleDTOs;
 using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Repositories.Mapper;
 using EVStationRental.Repositories.Models;
 using EVStationRental.Repositories.UnitOfWork;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.InternalServices.IServices.IVehicleServices;
+using EVStationRental.Services.Realtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,10 +17,12 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
     public class VehicleService : IVehicleService
     {
         private readonly IUnitOfWork unitOfWork;
+        private readonly IRealtimeNotifier _realtimeNotifier;
 
-        public VehicleService(IUnitOfWork unitOfWork)
+        public VehicleService(IUnitOfWork unitOfWork, IRealtimeNotifier realtimeNotifier)
         {
             this.unitOfWork = unitOfWork;
+            _realtimeNotifier = realtimeNotifier;
         }
 
         public async Task<IServiceResult> GetAllVehiclesAsync()
@@ -104,6 +108,7 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
             }
             var vehicle = dto.ToVehicle();
             var result = await unitOfWork.VehicleRepository.CreateVehicleAsync(vehicle);
+            await NotifyVehicleUpdatedAsync(result ?? vehicle);
             return new ServiceResult
             {
                 StatusCode = Const.SUCCESS_CREATE_CODE,
@@ -143,6 +148,7 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
             dto.MapToVehicle(vehicle);
 
             var updated = await unitOfWork.VehicleRepository.UpdateVehicleAsync(vehicle);
+            await NotifyVehicleUpdatedAsync(updated ?? vehicle);
             return new ServiceResult
             {
                 StatusCode = Const.SUCCESS_UPDATE_CODE,
@@ -153,9 +159,19 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
 
         public async Task<IServiceResult> SoftDeleteVehicleAsync(Guid vehicleId)
         {
+            var vehicle = await unitOfWork.VehicleRepository.GetVehicleByIdAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy xe hoặc đã bị xóa" };
+            }
+
             var success = await unitOfWork.VehicleRepository.SoftDeleteVehicleAsync(vehicleId);
             if (!success)
-                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy xe hoặc đã bị xóa" };
+            {
+                return new ServiceResult { StatusCode = Const.ERROR_EXCEPTION, Message = "Không thể xóa xe" };
+            }
+
+            await NotifyVehicleUpdatedAsync(vehicle, isDeleted: true);
             return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Xóa mềm xe thành công" };
         }
 
@@ -185,9 +201,20 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
 
         public async Task<IServiceResult> UpdateIsActiveAsync(Guid vehicleId, bool isActive)
         {
+            var vehicle = await unitOfWork.VehicleRepository.GetVehicleByIdAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy xe" };
+            }
+
             var success = await unitOfWork.VehicleRepository.UpdateIsActiveAsync(vehicleId, isActive);
             if (!success)
-                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy xe" };
+            {
+                return new ServiceResult { StatusCode = Const.ERROR_EXCEPTION, Message = "Không thể cập nhật trạng thái xe" };
+            }
+
+            vehicle.Isactive = isActive;
+            await NotifyVehicleUpdatedAsync(vehicle);
             return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Cập nhật trạng thái xe thành công" };
         }
 
@@ -248,6 +275,27 @@ namespace EVStationRental.Services.InternalServices.Services.VehicleServices
                     Message = $"Lỗi khi lấy thông tin xe: {innerMessage}"
                 };
             }
+        }
+
+        private Task NotifyVehicleUpdatedAsync(Vehicle? vehicle, bool isDeleted = false)
+        {
+            if (vehicle == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var payload = new VehicleUpdatedPayload
+            {
+                VehicleId = vehicle.VehicleId,
+                SerialNumber = vehicle.SerialNumber,
+                Status = vehicle.Status.ToString(),
+                IsActive = vehicle.Isactive,
+                StationId = vehicle.StationId,
+                IsDeleted = isDeleted,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            return _realtimeNotifier.NotifyVehicleUpdatedAsync(payload);
         }
     }
 }

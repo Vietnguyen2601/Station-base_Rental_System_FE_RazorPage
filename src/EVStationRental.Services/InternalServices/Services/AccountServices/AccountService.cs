@@ -1,19 +1,24 @@
 ﻿using EVStationRental.Common.DTOs;
+using EVStationRental.Common.DTOs.Realtime;
 using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Repositories.Mapper;
+using EVStationRental.Repositories.Models;
 using EVStationRental.Repositories.UnitOfWork;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.InternalServices.IServices.IAccountServices;
+using EVStationRental.Services.Realtime;
 
 namespace EVStationRental.Services.InternalServices.Services.AccountServices
 {
     public class AccountService : IAccountService
     {
         private readonly IUnitOfWork unitOfWork;
+        private readonly IRealtimeNotifier _realtimeNotifier;
 
-        public AccountService(IUnitOfWork unitOfWork)
+        public AccountService(IUnitOfWork unitOfWork, IRealtimeNotifier realtimeNotifier)
         {
             this.unitOfWork = unitOfWork;
+            _realtimeNotifier = realtimeNotifier;
         }
 
         public async Task<IServiceResult> GetAccountByIdAsync(Guid id)
@@ -153,6 +158,10 @@ namespace EVStationRental.Services.InternalServices.Services.AccountServices
                 // Get updated account with roles
                 var updatedAccount = await unitOfWork.AccountRepository.GetAccountWithRolesAsync(accountId);
                 var accountDto = updatedAccount?.ToViewAccountDTO();
+                if (updatedAccount != null)
+                {
+                    await PublishAccountChangedAsync(updatedAccount);
+                }
 
                 return new ServiceResult
                 {
@@ -214,6 +223,10 @@ namespace EVStationRental.Services.InternalServices.Services.AccountServices
                 // Get updated account with roles
                 var updatedAccount = await unitOfWork.AccountRepository.GetAccountWithRolesAsync(accountId);
                 var accountDto = updatedAccount?.ToViewAccountDTO();
+                if (updatedAccount != null)
+                {
+                    await PublishAccountChangedAsync(updatedAccount);
+                }
 
                 return new ServiceResult
                 {
@@ -263,6 +276,7 @@ namespace EVStationRental.Services.InternalServices.Services.AccountServices
                 // Soft delete account
                 account.Isactive = false;
                 await unitOfWork.AccountRepository.UpdateAsync(account);
+                await PublishAccountChangedAsync(account);
 
                 return new ServiceResult
                 {
@@ -279,6 +293,25 @@ namespace EVStationRental.Services.InternalServices.Services.AccountServices
                     Message = $"Lỗi khi xoá tài khoản: {ex.Message} {innerMessage}"
                 };
             }
+        }
+
+        private Task PublishAccountChangedAsync(Account? account)
+        {
+            if (account == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var payload = new AccountSummaryPayload
+            {
+                UserId = account.AccountId,
+                Email = account.Email,
+                FullName = account.Username,
+                RoleName = account.Role?.RoleName ?? string.Empty,
+                IsActive = account.Isactive
+            };
+
+            return _realtimeNotifier.NotifyAccountChangedAsync(payload);
         }
     }
 }

@@ -1,4 +1,7 @@
-﻿<!DOCTYPE html>
+﻿@using System.Security.Claims
+@using EVStationRental.Common.DTOs.WalletDTOs
+@inject EVStationRental.Services.InternalServices.IServices.IWalletServices.IWalletService WalletService
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
@@ -12,6 +15,28 @@
 @{
     var isAuth = User.Identity?.IsAuthenticated ?? false;
     var isAdmin = User.IsInRole("Admin");
+    var walletDisplay = "-- ₫";
+    var showWalletChip = isAuth && !isAdmin;
+
+    if (showWalletChip)
+    {
+        var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        if (Guid.TryParse(userIdValue, out var accountId))
+        {
+            try
+            {
+                var walletResult = await WalletService.GetWalletBalanceAsync(accountId);
+                if (walletResult?.Data is WalletBalanceDTO walletDto)
+                {
+                    walletDisplay = walletDto.Balance.ToString("n0") + " ₫";
+                }
+            }
+            catch
+            {
+                walletDisplay = "-- ₫";
+            }
+        }
+    }
 }
     <header class="app-header shadow-sm">
         <div class="app-header__inner">
@@ -42,6 +67,13 @@
                 }
                 else
                 {
+                    @if (showWalletChip)
+                    {
+                        <div class="wallet-chip" title="Số dư ví của bạn">
+                            <span>Ví:</span>
+                            <strong data-wallet-balance-header>@walletDisplay</strong>
+                        </div>
+                    }
                     <form method="post" asp-page="/Auth/Logout">
                         @Html.AntiForgeryToken()
                         <button type="submit" class="btn btn-pill btn-outline">Đăng xuất</button>
@@ -71,6 +103,11 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    @if (isAuth)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.5/dist/browser/signalr.min.js"></script>
+        <script src="~/js/signalr-notifications.js" asp-append-version="true"></script>
+    }
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>

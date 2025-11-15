@@ -25,7 +25,7 @@ namespace EVStationRental.Services.InternalServices.Services.FeedbackServices
             var hasCompleatedOrder = await _unitOfWork.OrderRepository
                 .GetOrderByIdAsync(dto.OrderId);
 
-            if (hasCompleatedOrder == null || !hasCompleatedOrder.Status.Equals("COMPLETED"))
+            if (hasCompleatedOrder == null || hasCompleatedOrder.Status != Common.Enums.EnumModel.OrderStatus.COMPLETED)
             {
                 return new ServiceResult
                 {
@@ -35,7 +35,7 @@ namespace EVStationRental.Services.InternalServices.Services.FeedbackServices
             }
 
             var feedback = dto.ToFeedback();
-            var result =  await _unitOfWork.FeedbackRepository.CreateFeedbackAsync(feedback);
+            var result = await _unitOfWork.FeedbackRepository.CreateFeedbackAsync(feedback);
             return new ServiceResult
             {
                 StatusCode = Const.SUCCESS_CREATE_CODE,
@@ -99,7 +99,7 @@ namespace EVStationRental.Services.InternalServices.Services.FeedbackServices
         {
             var feedbacks = await _unitOfWork.FeedbackRepository.GetFeedbacksByCustomerIdAsync(customerId);
             var feedbackDtos = feedbacks.Select(f => f.ToViewFeedbackDTO()).ToList();
-            if (feedbacks == null )
+            if (feedbacks == null)
             {
                 return new ServiceResult
                 {

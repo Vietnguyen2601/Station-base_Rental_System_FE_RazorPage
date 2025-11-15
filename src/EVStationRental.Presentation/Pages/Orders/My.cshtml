@@ -21,7 +21,7 @@
         {
             foreach (var order in Model.Orders)
             {
-                <div class="order-row mb-3">
+                <div class="order-row mb-3" data-order-row="@order.OrderId">
                     <div class="d-flex justify-content-between flex-wrap gap-3">
                         <div>
                             <div class="fw-semibold mb-1">Mã đơn: @order.OrderCode</div>
@@ -32,10 +32,10 @@
                                 OrderStatus.ONGOING => "badge-warning",
                                 OrderStatus.CANCELED => "badge-danger",
                                 _ => "badge-info"
-                            })">@order.Status</span>
+                            })" data-order-status>@order.Status</span>
                         </div>
                         <div class="text-end">
-                            <div class="fw-bold">@order.TotalPrice.ToString("n0") ₫</div>
+                            <div class="fw-bold" data-order-total>@order.TotalPrice.ToString("n0") ₫</div>
                             <div class="mt-2 d-flex flex-wrap gap-2 justify-content-end">
                                 <a class="btn btn-outline btn-sm" asp-page="/Orders/Details" asp-route-id="@order.OrderId">Chi tiết</a>
                                 @if (order.Status == OrderStatus.COMPLETED)

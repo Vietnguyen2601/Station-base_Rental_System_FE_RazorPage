@@ -10,13 +10,13 @@
     <div class="d-flex flex-wrap gap-3 align-items-center mb-4">
         <div class="card-panel flex-grow-1">
             <p class="text-muted mb-1">Số dư hiện tại</p>
-            <div class="display-6 text-success">@Model.Balance.ToString("n0") ₫</div>
+            <div class="display-6 text-success" data-wallet-balance-page>@Model.Balance.ToString("n0") ₫</div>
         </div>
         <a class="btn btn-primary btn-pill btn-lg" asp-page="/Wallet/Topup">Nạp thêm</a>
     </div>
 
     <h5 class="mb-3">Lịch sử giao dịch</h5>
-    <div id="walletList">
+    <div id="walletList" data-wallet-history-table>
         @if (!Model.Transactions.Any())
         {
             <div class="flash flash-info">Chưa có giao dịch nào.</div>

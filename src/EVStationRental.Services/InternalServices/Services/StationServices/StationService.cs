@@ -1,9 +1,11 @@
-﻿using EVStationRental.Common.DTOs.StationDTOs;
+﻿using EVStationRental.Common.DTOs.Realtime;
+using EVStationRental.Common.DTOs.StationDTOs;
 using EVStationRental.Common.Enums.ServiceResultEnum;
 using EVStationRental.Repositories.Mapper;
 using EVStationRental.Repositories.UnitOfWork;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.InternalServices.IServices.IStationServices;
+using EVStationRental.Services.Realtime;
 using System.Linq;
 using System.Threading.Tasks;
 using System;
@@ -14,10 +16,12 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
     public class StationService : IStationService
     {
         private readonly IUnitOfWork unitOfWork;
+        private readonly IRealtimeNotifier _realtimeNotifier;
 
-        public StationService(IUnitOfWork unitOfWork)
+        public StationService(IUnitOfWork unitOfWork, IRealtimeNotifier realtimeNotifier)
         {
             this.unitOfWork = unitOfWork;
+            _realtimeNotifier = realtimeNotifier;
         }
 
         public async Task<IServiceResult> CreateStationAsync(CreateStationRequestDTO dto)
@@ -36,6 +40,7 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
 
             var station = dto.ToStation();
             var result = await unitOfWork.StationRepository.CreateStationAsync(station);
+            await NotifyStationUpdatedAsync(result ?? station);
             return new ServiceResult
             {
                 StatusCode = Const.SUCCESS_CREATE_CODE,
@@ -128,6 +133,7 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
             dto.MapToStation(station);
 
             var updated = await unitOfWork.StationRepository.UpdateStationAsync(station);
+            await NotifyStationUpdatedAsync(updated ?? station);
             return new ServiceResult
             {
                 StatusCode = Const.SUCCESS_UPDATE_CODE,
@@ -138,10 +144,20 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
 
         public async Task<IServiceResult> SoftDeleteStationAsync(Guid stationId)
         {
+            var station = await unitOfWork.StationRepository.GetStationByIdAsync(stationId);
+            if (station == null)
+            {
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy trạm hoặc đã bị xóa" };
+            }
+
             var success = await unitOfWork.StationRepository.SoftDeleteStationAsync(stationId);
             if (!success)
-                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm th?y tr?m ho?c ?ã b? xóa" };
-            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Xóa m?m tr?m thành công" };
+            {
+                return new ServiceResult { StatusCode = Const.ERROR_EXCEPTION, Message = "Không thể xóa trạm" };
+            }
+
+            await NotifyStationUpdatedAsync(station, isDeleted: true);
+            return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Xóa mềm trạm thành công" };
         }
 
         public async Task<IServiceResult> GetActiveStationsAsync()
@@ -168,9 +184,20 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
 
         public async Task<IServiceResult> UpdateIsActiveAsync(Guid stationId, bool isActive)
         {
+            var station = await unitOfWork.StationRepository.GetStationByIdAsync(stationId);
+            if (station == null)
+            {
+                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy trạm" };
+            }
+
             var success = await unitOfWork.StationRepository.UpdateIsActiveAsync(stationId, isActive);
             if (!success)
-                return new ServiceResult { StatusCode = Const.WARNING_NO_DATA_CODE, Message = "Không tìm thấy trạm" };
+            {
+                return new ServiceResult { StatusCode = Const.ERROR_EXCEPTION, Message = "Không thể cập nhật trạng thái trạm" };
+            }
+
+            station.Isactive = isActive;
+            await NotifyStationUpdatedAsync(station);
             return new ServiceResult { StatusCode = Const.SUCCESS_UPDATE_CODE, Message = "Cập nhật trạng thái trạm thành công" };
         }
 
@@ -230,6 +257,25 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                     Message = $"Lỗi khi lấy danh sách trạm: {innerMessage}"
                 };
             }
+        }
+
+        private Task NotifyStationUpdatedAsync(EVStationRental.Repositories.Models.Station? station, bool isDeleted = false)
+        {
+            if (station == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            var payload = new StationUpdatedPayload
+            {
+                StationId = station.StationId,
+                Name = station.Name,
+                IsActive = station.Isactive,
+                IsDeleted = isDeleted,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            return _realtimeNotifier.NotifyStationUpdatedAsync(payload);
         }
     }
 }
