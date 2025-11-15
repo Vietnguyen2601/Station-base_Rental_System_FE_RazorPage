@@ -17,9 +17,9 @@
         </div>
         <div class="col-lg-8">
             <div class="card-panel">
-                <h2 class="mb-2">Nạp tiền qua VNPay</h2>
+                <h2 class="mb-2">Nạp tiền vào ví</h2>
                 <p class="text-muted mb-4">
-                    Giao dịch được chuyển đến cổng VNPay sandbox. Sau khi thanh toán thành công, hệ thống sẽ cập nhật số dư ví của bạn ngay lập tức.
+                    Chọn phương thức thanh toán phù hợp. Sau khi thanh toán thành công, hệ thống sẽ cập nhật số dư ví của bạn ngay lập tức.
                 </p>
                 <form method="post" class="form-modern">
                     @Html.AntiForgeryToken()
@@ -33,23 +33,34 @@
                         <div class="form-text">Tối thiểu 10.000 VNĐ, tối đa 50.000.000 VNĐ.</div>
                         <span asp-validation-for="Input.Amount" class="text-danger"></span>
                     </div>
-                    <div class="d-grid d-md-flex gap-2">
-                        <button class="btn btn-primary btn-pill flex-fill" type="submit">
-                            Thanh toán qua VNPay
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Chọn phương thức thanh toán:</label>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success btn-lg" type="submit">
+                            <i class="bi bi-credit-card"></i> Thanh toán qua PayOS
                         </button>
-                        <button class="btn btn-outline btn-pill flex-fill" type="submit" formaction="?handler=Manual">
-                            Nạp nhanh qua ví
+                        <button class="btn btn-outline-primary" type="submit" formaction="?handler=VNPay">
+                            <i class="bi bi-wallet2"></i> Thanh toán qua VNPay
+                        </button>
+                        <button class="btn btn-outline-secondary" type="submit" formaction="?handler=Manual">
+                            <i class="bi bi-lightning-fill"></i> Nạp nhanh (Thủ công)
                         </button>
                     </div>
                 </form>
                 <div class="mt-4">
-                    <div class="small text-muted">Lưu ý:</div>
-                    <ul class="small text-muted mb-0">
-                        <li>Đảm bảo trình duyệt không chặn popup/redirect khi chuyển đến VNPay.</li>
-                        <li>Sau khi hoàn tất, VNPay sẽ tự động đưa bạn trở lại trang thông báo kết quả.</li>
-                        <li>Nếu VNPay tạm ngưng, dùng nút "Nạp nhanh qua ví" để ghi nhận thủ công.</li>
-                        <li>Bạn có thể xem mọi giao dịch trong mục “Lịch sử ví”.</li>
-                    </ul>
+                    <div class="alert alert-info">
+                        <div class="small fw-bold mb-2"><i class="bi bi-info-circle"></i> Lưu ý:</div>
+                        <ul class="small mb-0">
+                            <li><strong>PayOS (Khuyến nghị):</strong> Cổng thanh toán nhanh chóng, an toàn với nhiều phương thức.</li>
+                            <li><strong>VNPay:</strong> Hỗ trợ thanh toán qua thẻ ngân hàng và ví điện tử.</li>
+                            <li><strong>Nạp nhanh:</strong> Dùng cho mục đích thử nghiệm, không qua cổng thanh toán.</li>
+                            <li>Đảm bảo trình duyệt không chặn popup khi chuyển đến cổng thanh toán.</li>
+                            <li>Bạn có thể xem mọi giao dịch trong mục <a href="/Wallet/History" class="alert-link">"Lịch sử ví"</a>.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>

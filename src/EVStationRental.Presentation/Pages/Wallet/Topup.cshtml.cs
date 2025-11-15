@@ -66,6 +66,45 @@ public class TopupModel : PageModel
             return RedirectToPage("/Wallet/Topup");
         }
 
+        var returnUrl = BuildAbsolutePageUrl("/Wallet/PayOSReturn");
+        var cancelUrl = BuildAbsolutePageUrl("/Wallet/History");
+
+        var response = await _walletService.CreatePayOSUrlByWalletIdAsync(
+            WalletId,
+            Input.Amount,
+            returnUrl,
+            cancelUrl);
+
+        if (response?.StatusCode is >= 200 and < 300 && response.Data != null)
+        {
+            // Extract payment URL from response
+            var paymentUrl = response.Data.GetType().GetProperty("PaymentUrl")?.GetValue(response.Data)?.ToString();
+            if (!string.IsNullOrWhiteSpace(paymentUrl))
+            {
+                return Redirect(paymentUrl);
+            }
+        }
+
+        TempData["Error"] = response?.Message ?? "Không tạo được giao dịch PayOS.";
+        return RedirectToPage("/Wallet/Topup");
+    }
+
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> OnPostVNPayAsync()
+    {
+        Input ??= new WalletTopupVm();
+        if (!ModelState.IsValid)
+        {
+            await EnsureWalletAsync();
+            return Page();
+        }
+
+        if (!await EnsureWalletAsync())
+        {
+            TempData["Error"] = "Không thể khởi tạo ví. Vui lòng thử lại.";
+            return RedirectToPage("/Wallet/Topup");
+        }
+
         var returnUrl = BuildAbsolutePageUrl("/Payments/VNPayReturn");
         var cancelUrl = BuildAbsolutePageUrl("/Wallet/History");
         var ipAddress = GetClientIpAddress();

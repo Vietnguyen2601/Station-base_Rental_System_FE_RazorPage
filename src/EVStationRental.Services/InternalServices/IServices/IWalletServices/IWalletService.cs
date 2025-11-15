@@ -15,5 +15,9 @@ namespace EVStationRental.Services.InternalServices.IServices.IWalletServices
         Task<IServiceResult> CreateWalletForAccountAsync(Guid accountId);
         Task<IServiceResult> CreateVNPayUrlByWalletIdAsync(Guid walletId, decimal amount, string returnUrl, string cancelUrl, string ipAddress);
         Task<IServiceResult> HandleVNPayWalletReturnAsync(VNPayReturnDTO callback);
+        
+        // PayOS methods
+        Task<IServiceResult> CreatePayOSUrlByWalletIdAsync(Guid walletId, decimal amount, string returnUrl, string cancelUrl);
+        Task<IServiceResult> HandlePayOSWalletReturnAsync(long orderCode, string status);
     }
 }
