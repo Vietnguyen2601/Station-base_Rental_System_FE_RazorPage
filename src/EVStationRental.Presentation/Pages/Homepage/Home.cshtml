@@ -1,5 +1,6 @@
 @page
 @using System
+@using System.Linq
 @model EVStationRental.Presentation.Pages.Homepage.HomeModel
 @{
     ViewData["Title"] = "Trang chủ";
@@ -11,53 +12,181 @@
         Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg")
     };
     var featuredImages = vehicleImages.OrderBy(_ => Guid.NewGuid()).Take(4).ToList();
+    var heroPrimary = featuredImages.FirstOrDefault() ?? vehicleImages.First();
+    var heroSecondary = featuredImages.Skip(1).Take(2).ToList();
+    var stats = new (string Value, string Label, string Description)[]
+    {
+        ("120+", "Trạm đang hoạt động", "Phủ sóng 21 tỉnh / thành cùng chuẩn CCS, Type-2."),
+        ("850+", "Xe sẵn sàng", "Đảm bảo kiểm định pin và bảo hiểm tiêu chuẩn."),
+        ("15'", "Thủ tục nhận xe", "Quy trình số hóa, ký hợp đồng online."),
+    };
+    var features = new (string Icon, string Title, string Description)[]
+    {
+        ("🔌", "Bản đồ sạc realtime", "Theo dõi công suất, tình trạng từng trạm và tự động định tuyến."),
+        ("🧠", "Gợi ý thông minh", "Thuật toán đề xuất xe theo lịch sử và nhu cầu hành trình."),
+        ("💳", "Ví tích hợp", "Đồng bộ ví nội bộ, thẻ tín dụng và hóa đơn doanh nghiệp."),
+        ("🛟", "Chăm sóc 24/7", "Đường dây hỗ trợ kỹ thuật, cứu hộ pin và bảo hiểm chuyến đi.")
+    };
+    var steps = new (string Title, string Description)[]
+    {
+        ("Chọn trạm & mẫu xe", "Bộ lọc nâng cao giúp bạn tìm xe phù hợp phạm vi hoạt động."),
+        ("Đặt lịch thông minh", "Hệ thống khóa xe tự động, giữ xe tối đa 30 phút."),
+        ("Theo dõi & thanh toán", "Mọi giao dịch được đồng bộ với ví và trung tâm điều phối.")
+    };
+    var testimonials = new (string Quote, string Author, string Role)[]
+    {
+        ("Dữ liệu realtime giúp đội ngũ vận hành nhìn thấy toàn bộ đội xe và trạm sạc trong một màn hình.", "Trần Hữu Thái", "Ops Lead · EVista Logistics"),
+        ("Quy trình thuê xe cực nhanh, hợp đồng ký số, hóa đơn về ngay sau hành trình.", "Lê Gia My", "Khách hàng doanh nghiệp"),
+        ("Dashboard của Admin giảm 40% thời gian phản hồi yêu cầu hỗ trợ từ tài xế.", "Nguyễn Bảo Anh", "Customer Success · E-Move")
+    };
+    var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
 }
 
 <section class="page-card hero">
     <div class="row align-items-center g-4">
-        <div class="col-lg-7">
-            <p class="badge badge-info mb-3">EV Rental Platform</p>
-            <h1 class="display-5 fw-bold mb-3">Thuê xe điện nhanh, an toàn và thông minh</h1>
-            <p class="lead text-muted">Kết nối khách hàng với mạng lưới trạm sạc &amp; xe điện trên toàn hệ thống. Tối ưu vận hành với Dashboard realtime cho quản trị viên.</p>
-            <div class="mt-4 d-flex flex-wrap gap-3">
+        <div class="col-lg-6">
+            <p class="hero__eyebrow">Hệ sinh thái thuê xe điện</p>
+            <h1 class="display-5 fw-bold mb-3">Thuê xe điện nhanh, đồng bộ dữ liệu và an toàn tuyệt đối</h1>
+            <p class="lead text-muted">Kết nối khách hàng với mạng lưới trạm sạc &amp; xe điện trên toàn hệ thống. Tối ưu vận hành với Dashboard realtime, cảnh báo pin và tự động hóa hợp đồng.</p>
+            <div class="hero__actions mt-4">
                 <a class="btn btn-primary btn-pill btn-lg" asp-page="/Vehicles/Browse">Khám phá xe</a>
                 <a class="btn btn-outline btn-pill btn-lg" asp-page="/Stations/Browse">Xem trạm gần bạn</a>
             </div>
+            <div class="hero__stats">
+                @foreach (var stat in stats)
+                {
+                    <div class="hero-stat">
+                        <div class="hero-stat__value">@stat.Value</div>
+                        <div class="hero-stat__label">@stat.Label</div>
+                    </div>
+                }
+            </div>
         </div>
-        <div class="col-lg-5">
-            @if (!(User.Identity?.IsAuthenticated ?? false))
+        <div class="col-lg-6 hero__visual">
+            <div class="hero-preview">
+                <div class="hero-preview__main">
+                    <img src="@heroPrimary" alt="Mẫu xe điện nổi bật" loading="lazy" />
+                </div>
+                <div class="hero-preview__badge">Đánh giá 4.9 ⭐</div>
+                <div class="hero-preview__stack">
+                    <div class="floating-card">
+                        <small>Đơn hoàn tất</small>
+                        <strong>8.2K+</strong>
+                        <span class="text-muted small">/ năm</span>
+                    </div>
+                    <div class="floating-card">
+                        <small>Thời gian nhận xe</small>
+                        <strong>15'</strong>
+                        <span class="text-muted small">tối đa</span>
+                    </div>
+                </div>
+            </div>
+            @if (heroSecondary.Any())
             {
-                <div class="card-panel">
-                    <h5 class="mb-3">Bắt đầu ngay</h5>
-                    <p class="text-muted">Đăng nhập để tiếp tục hành trình hoặc tạo tài khoản mới chỉ với vài bước.</p>
-                    <div class="d-flex flex-wrap gap-2 mt-3">
+                <div class="d-flex gap-3 mt-4">
+                    @foreach (var image in heroSecondary)
+                    {
+                        <div class="flex-fill rounded-4 overflow-hidden shadow-sm border border-light-subtle">
+                            <img src="@image" alt="EV preview" class="w-100" style="height:120px;object-fit:cover;" loading="lazy" />
+                        </div>
+                    }
+                </div>
+            }
+            <div class="hero-highlight mt-4">
+                @if (!isAuthenticated)
+                {
+                    <p class="text-uppercase text-muted small mb-1">Bắt đầu ngay</p>
+                    <h5 class="mb-2 text-white">Đăng nhập hoặc tạo tài khoản</h5>
+                    <p class="text-white-50 mb-3">Giữ lịch sử chuyến đi, lưu phương thức thanh toán và đồng bộ ví điện tử của bạn.</p>
+                    <div class="hero__actions">
                         <a class="btn btn-primary btn-pill flex-fill" asp-page="/Auth/Login">Đăng nhập</a>
-                        <a class="btn btn-outline btn-pill flex-fill" asp-page="/Auth/Register">Đăng ký</a>
+                        <a class="btn btn-outline btn-pill text-white border-light flex-fill" asp-page="/Auth/Register">Đăng ký</a>
                     </div>
-                </div>
-            }
-            else
-            {
-                <div class="card-panel bg-dark text-white">
-                    <p class="text-uppercase small text-muted mb-1">Đã đăng nhập</p>
-                    <h4 class="mb-3">Xin chào, @Model.DisplayName</h4>
-                    <p class="text-muted">Tiếp tục hành trình của bạn hoặc quản lý các giao dịch hiện tại.</p>
-                    <div class="d-flex flex-column gap-2 mt-3">
-                        <a class="btn btn-primary btn-pill" asp-page="/Vehicles/Browse">Thuê xe ngay</a>
-                        <a class="btn btn-outline btn-pill text-white border-light" asp-page="/Orders/My">Đơn của tôi</a>
-                        <a class="btn btn-outline btn-pill text-white border-light" asp-page="/Wallet/Topup">Nạp ví</a>
+                }
+                else
+                {
+                    <p class="text-uppercase text-muted small mb-1">Xin chào, @Model.DisplayName</p>
+                    <h5 class="mb-2 text-white">Tiếp tục hành trình của bạn</h5>
+                    <p class="text-white-50 mb-3">Xem trạng thái đơn hiện tại, quản lý ví và khám phá mẫu xe mới.</p>
+                    <div class="hero__actions">
+                        <a class="btn btn-primary btn-pill" asp-page="/Orders/My">Theo dõi đơn</a>
+                        <a class="btn btn-outline btn-pill text-white border-light" asp-page="/Wallet/History">Ví của tôi</a>
+                        <a class="btn btn-outline btn-pill text-white border-light" asp-page="/Vehicles/Browse">Khám phá xe</a>
                     </div>
-                </div>
-            }
+                }
+            </div>
         </div>
     </div>
 </section>
 
-<section class="page-card vehicle-showcase">
+<div class="home-divider"></div>
+
+<section class="page-section glass-card">
+    <div class="section-heading">
+        <span class="section-heading__eyebrow">Realtime Control Center</span>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h2 class="section-heading__title">Bám sát đội xe &amp; trạm sạc trong một bảng điều khiển</h2>
+                <p class="section-heading__subtitle">Mọi dữ liệu hành trình, trạng thái pin và hợp đồng luôn được đồng bộ tức thì.</p>
+            </div>
+            <a class="btn btn-outline btn-pill" asp-page="/Admin/Index">Xem Dashboard Admin</a>
+        </div>
+    </div>
+    <div class="stats-row">
+        @foreach (var stat in stats)
+        {
+            <article class="stats-pill">
+                <strong>@stat.Value</strong>
+                <p class="mb-1 fw-semibold">@stat.Label</p>
+                <p class="mb-0 text-muted small">@stat.Description</p>
+            </article>
+        }
+    </div>
+</section>
+
+<section class="page-section card-panel">
+    <div class="section-heading">
+        <span class="section-heading__eyebrow">Trải nghiệm đồng nhất</span>
+        <h2 class="section-heading__title">Một nền tảng – nhiều kịch bản khai thác</h2>
+        <p class="section-heading__subtitle">Ứng dụng khách hàng, quản trị viên và đối tác đều sử dụng chung ngôn ngữ thiết kế, tối ưu hiệu suất truy cập.</p>
+    </div>
+    <div class="feature-grid">
+        @foreach (var feature in features)
+        {
+            <article class="feature-card h-100">
+                <div class="feature-card__icon">@feature.Icon</div>
+                <h5 class="mb-2">@feature.Title</h5>
+                <p class="text-muted mb-0">@feature.Description</p>
+            </article>
+        }
+    </div>
+</section>
+
+<section class="page-section page-card">
+    <div class="section-heading">
+        <span class="section-heading__eyebrow">3 bước hoàn tất</span>
+        <h2 class="section-heading__title">Đặt xe điện chỉ trong vài phút</h2>
+        <p class="section-heading__subtitle">Chúng tôi tự động hóa xác thực, hợp đồng và thanh toán – bạn chỉ cần chọn xe.</p>
+    </div>
+    <div class="steps-grid">
+        @for (var i = 0; i < steps.Length; i++)
+        {
+            var step = steps[i];
+            <article class="step-card">
+                <div class="step-card__number">@(i + 1)</div>
+                <h5 class="mb-2">@step.Title</h5>
+                <p class="text-muted mb-0">@step.Description</p>
+            </article>
+        }
+    </div>
+</section>
+
+<section class="page-section page-card vehicle-showcase">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
         <div>
-            <h4 class="mb-1">Mẫu xe nổi bật</h4>
-            <small class="text-muted">Những chiếc EV sẵn sàng phục vụ bạn</small>
+            <p class="eyebrow mb-1">Mẫu xe tiêu biểu</p>
+            <h4 class="mb-1">Sẵn sàng cho mọi hành trình</h4>
+            <small class="text-muted">Những mẫu EV phổ biến được bảo dưỡng định kỳ từng 1.000km.</small>
         </div>
         <a class="btn btn-outline btn-pill" asp-page="/Vehicles/Browse">Xem tất cả</a>
     </div>
@@ -70,13 +199,44 @@
                         <img src="@image" alt="Electric vehicle" loading="lazy" />
                     </div>
                     <div class="card-body">
-                        <p class="text-muted mb-1">EV Rental</p>
+                        <p class="text-muted mb-1">EV Station Rental</p>
                         <h5 class="mb-2">Mẫu xe tiêu chuẩn</h5>
-                        <p class="small text-muted mb-3">Phù hợp đô thị, pin 80kWh, sạc nhanh 120kW.</p>
+                        <p class="small text-muted mb-3">Pin 80kWh · Sạc nhanh 120kW · Tầm hoạt động 420km.</p>
                         <a class="btn btn-primary btn-pill w-100" asp-page="/Stations/Browse">Đặt ngay</a>
                     </div>
                 </div>
             </div>
         }
+    </div>
+</section>
+
+<section class="page-section glass-card">
+    <div class="section-heading">
+        <span class="section-heading__eyebrow">Khách hàng nói gì</span>
+        <h2 class="section-heading__title">Tin tưởng bởi đội xe, doanh nghiệp và người dùng cá nhân</h2>
+    </div>
+    <div class="testimonial-grid">
+        @foreach (var testimonial in testimonials)
+        {
+            <article class="testimonial-card">
+                <p class="testimonial-card__quote">“@testimonial.Quote”</p>
+                <p class="testimonial-card__author mb-0">@testimonial.Author</p>
+                <small class="text-muted">@testimonial.Role</small>
+            </article>
+        }
+    </div>
+</section>
+
+<section class="page-card cta-banner text-white">
+    <div class="d-flex flex-column flex-lg-row gap-4 align-items-start align-items-lg-center">
+        <div class="flex-fill">
+            <p class="eyebrow text-white-50 mb-2">Sẵn sàng tăng tốc?</p>
+            <h3 class="mb-3">Biến mọi chuyến đi thành trải nghiệm điện hóa đáng nhớ</h3>
+            <p class="text-white-50 mb-0">Tạo tài khoản để đặt xe, quản lý ví và theo dõi toàn bộ hành trình trong một nền tảng thống nhất.</p>
+        </div>
+        <div class="cta-banner__actions">
+            <a class="btn btn-primary btn-pill btn-lg" asp-page="/Vehicles/Browse">Bắt đầu thuê xe</a>
+            <a class="btn btn-outline btn-pill btn-lg text-white border-light" asp-page="/Feedback/My">Chia sẻ nhu cầu</a>
+        </div>
     </div>
 </section>
