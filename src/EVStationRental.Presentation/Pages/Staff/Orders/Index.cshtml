@@ -234,7 +234,7 @@
                                     <path
                                         d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .12.374l-.4 3.2A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.493-1.238l-.4-3.2a.5.5 0 0 1 .12-.374z" />
                                 </svg>
-                                <p>@(string.IsNullOrEmpty(Model.SearchQuery) ? "Chưa có đơn hàng nào" : "Không tìm thấy đơn                            hàng")</p>
+                                <p>@(string.IsNullOrEmpty(Model.SearchQuery) ? "Chưa có đơn hàng nào" : "Không tìm thấy đơn                             hàng")</p>
                             </td>
                         </tr>
                     }
@@ -248,11 +248,15 @@
     <script>
         // Auto-hide alerts after 3 seconds
         setTimeout(function () {
-            var alerts = document.querySelectorAll('.alert');
+            var alerts = document.querySelectorAll('.alert:not(.position-fixed)');
             alerts.forEach(function (alert) {
                 var bsAlert = new bootstrap.Alert(alert);
                 bsAlert.close();
             });
         }, 3000);
+
+        // SignalR is already configured in signalr-notifications.js
+        // It will automatically handle OrderCreated and OrderStatusChanged events
+        console.log('Staff Orders page loaded. SignalR connection:', window.signalRConnection?.state);
     </script>
 }

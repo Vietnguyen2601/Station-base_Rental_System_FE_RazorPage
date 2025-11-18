@@ -158,7 +158,7 @@ else
                 </div>
             }
 
-            @* Payment and update return time in one action *@
+            @* Update return time and payment *@
             @if (Model.Order.Status == EVStationRental.Common.Enums.EnumModel.OrderStatus.ONGOING &&
                     !Model.IsPaymentCompleted && !Model.Order.ReturnTime.HasValue)
             {
@@ -167,15 +167,14 @@ else
                         <h6 class="card-title mb-3">
                             <span class="badge bg-primary">Hoàn tất đơn hàng</span>
                         </h6>
-                        <form method="post" asp-page-handler="FinalizePayment" asp-route-id="@Model.Order.OrderId">
+                        <form method="post" asp-page-handler="UpdateReturnTime" asp-route-id="@Model.Order.OrderId">
                             <button type="submit" class="btn btn-success btn-lg w-100"
-                                onclick="return confirm('Xác nhận thanh toán ' + '@Model.FinalPrice.ToString("N0")' + ' đ từ ví khách hàng và hoàn tất đơn hàng?')">
-                                <i class="bi bi-wallet2"></i> Thanh toán và hoàn tất
+                                onclick="return confirm('Xác nhận cập nhật thời gian trả xe và thanh toán ' + '@Model.FinalPrice.ToString("N0")' + ' đ từ ví khách hàng?')">
+                                <i class="bi bi-clock-history"></i> Cập nhật thời gian trả và thanh toán
                             </button>
                         </form>
                         <small class="text-muted d-block mt-2">
-                            <i class="bi bi-info-circle"></i> Thanh toán sẽ tự động cập nhật thời gian trả xe và hoàn tất đơn
-                            hàng
+                            <i class="bi bi-info-circle"></i> Sẽ cập nhật thời gian trả xe và tự động trừ tiền từ ví khách hàng
                         </small>
                     </div>
                 </div>
@@ -226,6 +225,113 @@ else
                 <div class="alert alert-success mt-4" role="alert">
                     <i class="bi bi-check-circle-fill"></i>
                     <strong>Đã cập nhật</strong> - Mức pin xe đã được cập nhật thành công
+                </div>
+            }
+
+            @* Success message after damage report creation *@
+            @if (Model.IsDamageReportCreated && Model.DamageReport == null)
+            {
+                <div class="alert alert-info mt-4" role="alert">
+                    <i class="bi bi-hourglass-split"></i>
+                    <strong>Đang tải lại thông tin...</strong> Báo cáo hư hỏng đã được tạo, vui lòng refresh trang nếu không
+                    thấy thông tin.
+                </div>
+            }
+
+            @* Create Damage Report - only show when no damage report exists AND not just created *@
+            @if (Model.DamageReport == null && !Model.IsDamageReportCreated)
+            {
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-white py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-exclamation-triangle-fill text-warning"></i> Báo cáo hư hỏng
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" asp-page-handler="CreateDamageReport" asp-route-id="@Model.Order.OrderId">
+                            <div class="mb-3">
+                                <label asp-for="CreateDamageReportDto.Description" class="form-label">
+                                    Mô tả hư hỏng <span class="text-danger">*</span>
+                                </label>
+                                <textarea asp-for="CreateDamageReportDto.Description" class="form-control" rows="4"
+                            placeholder="Mô tả chi tiết tình trạng hư hỏng của xe..." required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="CreateDamageReportDto.DamageLevel" class="form-label">
+                                    Mức độ hư hỏng <span class="text-danger">*</span>
+                                </label>
+                                <select asp-for="CreateDamageReportDto.DamageLevel" asp-items="Model.DamageLevels"
+                                    class="form-select" required>
+                                    <option value="">-- Chọn mức độ --</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="CreateDamageReportDto.EstimatedCost" class="form-label">
+                                    Chi phí ước tính (đ) <span class="text-danger">*</span>
+                                </label>
+                                <input asp-for="CreateDamageReportDto.EstimatedCost" type="number" class="form-control" min="0"
+                                    step="1000" placeholder="0" required />
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="CreateDamageReportDto.Img" class="form-label">URL hình ảnh (không bắt
+                                    buộc)</label>
+                                <input asp-for="CreateDamageReportDto.Img" type="url" class="form-control"
+                                    placeholder="https://example.com/image.jpg" />
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100"
+                                onclick="return confirm('Xác nhận tạo báo cáo hư hỏng?')">
+                                <i class="bi bi-file-earmark-text"></i> Tạo báo cáo hư hỏng
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            @* Display Damage Report - show when damage report exists *@
+            @if (Model.DamageReport != null)
+            {
+                <div class="card border-0 shadow-sm mt-4">
+                    <div class="card-header bg-warning py-3">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Báo cáo hư hỏng
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        @if (!string.IsNullOrEmpty(Model.DamageReport.Img))
+                        {
+                            <img src="@Model.DamageReport.Img" class="img-fluid mb-3 rounded" alt="Damage image"
+                                style="max-height: 200px; width: 100%; object-fit: cover;">
+                        }
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Mô tả</label>
+                            <div class="fw-semibold">@Model.DamageReport.Description</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Mức độ hư hỏng</label>
+                            <div>
+                                @switch (Model.DamageReport.DamageLevel)
+                                {
+                                    case EVStationRental.Common.Enums.EnumModel.DamageLevelEnum.MINOR:
+                                        <span class="badge bg-info">Nhỏ</span>
+                                        break;
+                                    case EVStationRental.Common.Enums.EnumModel.DamageLevelEnum.MODERATE:
+                                        <span class="badge bg-warning">Vừa</span>
+                                        break;
+                                    case EVStationRental.Common.Enums.EnumModel.DamageLevelEnum.SEVERE:
+                                        <span class="badge bg-danger">Nặng</span>
+                                        break;
+                                }
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted small">Chi phí ước tính</label>
+                            <div class="fw-bold text-danger">@Model.DamageReport.EstimatedCost.ToString("N0") đ</div>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label text-muted small">Ngày tạo báo cáo</label>
+                            <div class="text-muted small">@Model.DamageReport.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                        </div>
+                    </div>
                 </div>
             }
         </div>

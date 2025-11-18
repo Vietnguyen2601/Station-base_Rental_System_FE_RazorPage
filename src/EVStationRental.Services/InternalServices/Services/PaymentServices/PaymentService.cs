@@ -1,3 +1,4 @@
+using EVStationRental.Common.DTOs.DamageReportDTOs;
 using EVStationRental.Common.DTOs.PaymentDTOs;
 using EVStationRental.Common.DTOs.Realtime;
 using EVStationRental.Common.Enums.EnumModel;
@@ -6,6 +7,7 @@ using EVStationRental.Repositories.Models;
 using EVStationRental.Repositories.UnitOfWork;
 using EVStationRental.Services.Base;
 using EVStationRental.Services.ExternalService.IServices;
+using EVStationRental.Services.InternalServices.IServices.IDamageReportServices;
 using EVStationRental.Services.InternalServices.IServices.IPaymentServices;
 using EVStationRental.Services.Realtime;
 using Microsoft.Extensions.Logging;
@@ -24,19 +26,22 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
         private readonly DatabasePaymentService _dbPaymentService;
         private readonly ILogger<PaymentService> _logger;
         private readonly IRealtimeNotifier _realtimeNotifier;
+        private readonly IDamageReportService _damageReportService;
 
         public PaymentService(
-            IUnitOfWork unitOfWork, 
-            IVNPayService vnPayService, 
+            IUnitOfWork unitOfWork,
+            IVNPayService vnPayService,
             DatabasePaymentService dbPaymentService,
             ILogger<PaymentService> logger,
-            IRealtimeNotifier realtimeNotifier)
+            IRealtimeNotifier realtimeNotifier,
+            IDamageReportService damageReportService)
         {
             _unitOfWork = unitOfWork;
             _vnPayService = vnPayService;
             _dbPaymentService = dbPaymentService;
             _logger = logger;
             _realtimeNotifier = realtimeNotifier;
+            _damageReportService = damageReportService;
         }
 
         public async Task<IServiceResult> CreatePaymentAsync(CreatePaymentRequestDTO request)
@@ -101,7 +106,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     CreatedAt = payment.CreatedAt
                 };
 
-                _logger.LogInformation("VNPay payment created successfully. PaymentId: {PaymentId}, OrderId: {OrderId}", 
+                _logger.LogInformation("VNPay payment created successfully. PaymentId: {PaymentId}, OrderId: {OrderId}",
                     payment.PaymentId, request.OrderId);
 
                 return new ServiceResult(Const.SUCCESS_CREATE_CODE, "Payment created successfully", response);
@@ -279,7 +284,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
 
                 // VNPay không hỗ trợ hoàn tiền tự động qua API trong sandbox
                 // Trong thực tế sẽ cần tích hợp API hoàn tiền hoặc xử lý thủ công
-                
+
                 // Tạo bản ghi hoàn tiền
                 var refundPayment = new Payment
                 {
@@ -308,7 +313,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     await _unitOfWork.OrderRepository.UpdateAsync(order);
                 }
 
-                _logger.LogInformation("Deposit refunded successfully. OrderId: {OrderId}, RefundAmount: {Amount}", 
+                _logger.LogInformation("Deposit refunded successfully. OrderId: {OrderId}, RefundAmount: {Amount}",
                     orderId, payment.Amount);
 
                 return new ServiceResult(200, "Deposit refunded successfully", new
@@ -352,7 +357,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 // Kiểm tra xem đã hoàn cọc chưa
                 var existingRefunds = await _unitOfWork.PaymentRepository
                     .GetPaymentsByOrderIdAsync(orderId);
-                
+
                 var hasRefund = existingRefunds.Any(p => p.Amount < 0); // Số âm = hoàn tiền
                 if (hasRefund)
                 {
@@ -378,7 +383,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
 
                 await _unitOfWork.PaymentRepository.CreateAsync(autoRefund);
 
-                _logger.LogInformation("Auto refund processed successfully. OrderId: {OrderId}, RefundAmount: {Amount}", 
+                _logger.LogInformation("Auto refund processed successfully. OrderId: {OrderId}, RefundAmount: {Amount}",
                     orderId, payment.Amount);
 
                 return new ServiceResult(200, "Auto refund processed successfully", new
@@ -499,11 +504,12 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     return new ServiceResult(500, "Failed to update payment status");
                 }
 
-                _logger.LogInformation("VNPay return processed with procedure. PaymentId: {PaymentId}, Status: {Status}", 
+                _logger.LogInformation("VNPay return processed with procedure. PaymentId: {PaymentId}, Status: {Status}",
                     paymentId, status);
 
-                return new ServiceResult(200, "Payment processed successfully", new { 
-                    PaymentId = paymentId, 
+                return new ServiceResult(200, "Payment processed successfully", new
+                {
+                    PaymentId = paymentId,
                     Status = status,
                     Success = status == "COMPLETED"
                 });
@@ -534,9 +540,11 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 var pendingRefunds = await _dbPaymentService.GetPendingPaymentsByOrderAsync(orderId);
                 var refundPayments = pendingRefunds.Where(p => p.PaymentMethod == "VNPAY").ToList();
 
-                return new ServiceResult(200, "Order cancelled successfully", new {
+                return new ServiceResult(200, "Order cancelled successfully", new
+                {
                     OrderId = orderId,
-                    RefundPayments = refundPayments.Select(p => new {
+                    RefundPayments = refundPayments.Select(p => new
+                    {
                         PaymentId = p.PaymentId,
                         Amount = p.Amount,
                         Status = p.Status
@@ -568,7 +576,8 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     _ => "Order completed. No additional payment required."
                 };
 
-                return new ServiceResult(200, message, new {
+                return new ServiceResult(200, message, new
+                {
                     OrderId = orderId,
                     DueAmount = dueAmount,
                     Status = "COMPLETED"
@@ -595,7 +604,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
             // deposit_price = 10% của base_price - làm tròn về số nguyên
             decimal depositPrice = Math.Round(order.BasePrice * 0.10m, 0);
 
-            _logger.LogInformation("Deposit price calculated for Order {OrderId}: {DepositPrice}", 
+            _logger.LogInformation("Deposit price calculated for Order {OrderId}: {DepositPrice}",
                 orderId, depositPrice);
 
             return depositPrice;
@@ -637,7 +646,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
             // Total = base_price - promotion_price(if any) + damage_cost(if any) - làm tròn
             decimal totalPrice = Math.Round(basePrice - promotionPrice + damageCost, 0);
 
-            _logger.LogInformation("Total price calculated for Order {OrderId}: {TotalPrice} (Base: {BasePrice}, Promotion: {PromotionPrice}, Damage: {DamageCost})", 
+            _logger.LogInformation("Total price calculated for Order {OrderId}: {TotalPrice} (Base: {BasePrice}, Promotion: {PromotionPrice}, Damage: {DamageCost})",
                 orderId, totalPrice, basePrice, promotionPrice, damageCost);
 
             return totalPrice;
@@ -669,18 +678,21 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 }
             }
 
-            // Lấy damage cost nếu có damage report cho order này
-            var damageReports = await _unitOfWork.DamageReportRepository.GetAllDamageReportsAsync();
-            var orderDamageReport = damageReports.FirstOrDefault(dr => dr.OrderId == orderId && dr.Isactive);
-            if (orderDamageReport != null)
+            // Lấy damage cost nếu có damage report cho order này bằng GetDamageReportByOrderIdAsync
+            var damageReportResult = await _damageReportService.GetDamageReportByOrderIdAsync(orderId);
+            if (damageReportResult.StatusCode == Const.SUCCESS_READ_CODE && damageReportResult.Data != null)
             {
-                damageCost = orderDamageReport.EstimatedCost;
+                var damageReport = damageReportResult.Data as ViewDamageReportResponseDTO;
+                if (damageReport != null && damageReport.Isactive)
+                {
+                    damageCost = damageReport.EstimatedCost;
+                }
             }
 
             // Final = base_price - deposit_price - promotion_price(if any) + damage_cost(if any) - làm tròn
             decimal finalPrice = Math.Round(basePrice - depositPrice - promotionPrice + damageCost, 0);
 
-            _logger.LogInformation("Final price calculated for Order {OrderId}: {FinalPrice} (Base: {BasePrice}, Deposit: {DepositPrice}, Promotion: {PromotionPrice}, Damage: {DamageCost})", 
+            _logger.LogInformation("Final price calculated for Order {OrderId}: {FinalPrice} (Base: {BasePrice}, Deposit: {DepositPrice}, Promotion: {PromotionPrice}, Damage: {DamageCost})",
                 orderId, finalPrice, basePrice, depositPrice, promotionPrice, damageCost);
 
             return finalPrice;
@@ -696,7 +708,7 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                 // Find the ongoing order for the customer
                 var orders = await _unitOfWork.OrderRepository.GetOrdersByCustomerIdAsync(request.AccountId);
                 var order = orders?.FirstOrDefault(o => o.Status == OrderStatus.ONGOING);
-                
+
                 if (order == null)
                 {
                     return new ServiceResult
@@ -724,8 +736,39 @@ namespace EVStationRental.Services.InternalServices.Services.PaymentServices
                     };
                 }
 
-                // Use the amount provided in the request
-                var amountToDeduct = request.Amount;
+                // Calculate final price including damage cost if any
+                decimal basePrice = order.BasePrice;
+                decimal depositPrice = Math.Round(basePrice * 0.10m, 0);
+                decimal promotionPrice = 0m;
+                decimal damageCost = 0m;
+
+                // Áp dụng promotion nếu có
+                if (order.PromotionId.HasValue)
+                {
+                    var promotion = await _unitOfWork.PromotionRepository.GetByIdAsync(order.PromotionId.Value);
+                    if (promotion != null && promotion.Isactive)
+                    {
+                        promotionPrice = Math.Round(basePrice * (promotion.DiscountPercentage / 100), 0);
+                    }
+                }
+
+                // Lấy damage cost từ damage report nếu có
+                var damageReportResult = await _damageReportService.GetDamageReportByOrderIdAsync(order.OrderId);
+                if (damageReportResult.StatusCode == Const.SUCCESS_READ_CODE && damageReportResult.Data != null)
+                {
+                    var damageReport = damageReportResult.Data as ViewDamageReportResponseDTO;
+                    if (damageReport != null && damageReport.Isactive)
+                    {
+                        damageCost = damageReport.EstimatedCost;
+                        _logger.LogInformation("Damage cost added for Order {OrderId}: {DamageCost}", order.OrderId, damageCost);
+                    }
+                }
+
+                // Calculate final amount to deduct: base_price - deposit_price - promotion_price + damage_cost
+                var amountToDeduct = Math.Round(basePrice - depositPrice - promotionPrice + damageCost, 0);
+
+                _logger.LogInformation("Final payment calculated for Order {OrderId}: {Amount} (Base: {BasePrice}, Deposit: {DepositPrice}, Promotion: {PromotionPrice}, Damage: {DamageCost})",
+                    order.OrderId, amountToDeduct, basePrice, depositPrice, promotionPrice, damageCost);
 
                 // Handle payment if using WALLET
                 if (request.FinalPaymentMethod.ToUpper() == "WALLET" && amountToDeduct > 0)

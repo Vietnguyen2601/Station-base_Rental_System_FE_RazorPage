@@ -1,16 +1,22 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using EVStationRental.Services.InternalServices.IServices.IOrderServices;
 using EVStationRental.Services.InternalServices.IServices.IAccountServices;
 using EVStationRental.Services.InternalServices.IServices.IVehicleServices;
 using EVStationRental.Services.InternalServices.IServices.IPaymentServices;
+using EVStationRental.Services.InternalServices.IServices.IDamageReportServices;
 using EVStationRental.Common.DTOs.OrderDTOs;
 using EVStationRental.Common.DTOs;
 using EVStationRental.Common.DTOs.VehicleDTOs;
 using EVStationRental.Common.DTOs.PaymentDTOs;
+using EVStationRental.Common.DTOs.DamageReportDTOs;
+using EVStationRental.Common.Enums.EnumModel;
 using System;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace EVStationRental.Presentation.Pages.Staff.Orders;
 
@@ -21,6 +27,7 @@ public class DetailsModel : PageModel
     private readonly IAccountService _accountService;
     private readonly IVehicleService _vehicleService;
     private readonly IPaymentService _paymentService;
+    private readonly IDamageReportService _damageReportService;
     private readonly ILogger<DetailsModel> _logger;
 
     public DetailsModel(
@@ -28,12 +35,14 @@ public class DetailsModel : PageModel
         IAccountService accountService,
         IVehicleService vehicleService,
         IPaymentService paymentService,
+        IDamageReportService damageReportService,
         ILogger<DetailsModel> logger)
     {
         _orderService = orderService;
         _accountService = accountService;
         _vehicleService = vehicleService;
         _paymentService = paymentService;
+        _damageReportService = damageReportService;
         _logger = logger;
     }
 
@@ -44,9 +53,15 @@ public class DetailsModel : PageModel
     public decimal FinalPrice { get; set; }
     public bool IsPaymentCompleted { get; set; }
     public bool IsBatteryUpdateCompleted { get; set; }
+    public bool IsDamageReportCreated { get; set; }
+    public ViewDamageReportResponseDTO? DamageReport { get; set; }
+    public List<SelectListItem> DamageLevels { get; set; } = new();
 
     [BindProperty]
     public int NewBatteryLevel { get; set; }
+
+    [BindProperty]
+    public CreateDamageReportRequestDTO CreateDamageReportDto { get; set; } = new();
 
     public async Task<IActionResult> OnGetAsync(Guid id)
     {
@@ -105,6 +120,56 @@ public class DetailsModel : PageModel
         // Check if battery update is completed (from TempData)
         IsBatteryUpdateCompleted = TempData["BatteryUpdateCompleted"] as bool? ?? false;
 
+        // Check if damage report was just created (from TempData)
+        IsDamageReportCreated = TempData["DamageReportCreated"] as bool? ?? false;
+
+        // Load damage report if exists
+        try
+        {
+            var damageReportResult = await _damageReportService.GetDamageReportByOrderIdAsync(order.OrderId);
+
+            _logger.LogInformation("Damage report query result: StatusCode={StatusCode}, HasData={HasData}",
+                damageReportResult.StatusCode,
+                damageReportResult.Data != null);
+
+            if (damageReportResult.StatusCode == 200 && damageReportResult.Data != null)
+            {
+                if (damageReportResult.Data is ViewDamageReportResponseDTO damageReport)
+                {
+                    DamageReport = damageReport;
+                    _logger.LogInformation("Damage report loaded successfully for Order {OrderId}, DamageId={DamageId}",
+                        order.OrderId, damageReport.DamageId);
+                }
+                else
+                {
+                    _logger.LogWarning("Failed to cast damage report data for Order {OrderId}. Data type: {DataType}",
+                        order.OrderId, damageReportResult.Data.GetType().Name);
+                }
+            }
+            else if (damageReportResult.StatusCode == 404)
+            {
+                _logger.LogInformation("No damage report found for Order {OrderId} (expected for new orders)", order.OrderId);
+            }
+            else
+            {
+                _logger.LogWarning("Failed to load damage report for Order {OrderId}: {Message}",
+                    order.OrderId, damageReportResult.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error loading damage report for Order {OrderId}", order.OrderId);
+        }
+
+        // Load damage levels for dropdown
+        DamageLevels = Enum.GetValues(typeof(DamageLevelEnum))
+            .Cast<DamageLevelEnum>()
+            .Select(d => new SelectListItem
+            {
+                Value = d.ToString(),
+                Text = d.ToString()
+            }).ToList();
+
         return Page();
     }
 
@@ -126,18 +191,76 @@ public class DetailsModel : PageModel
 
     public async Task<IActionResult> OnPostUpdateReturnTimeAsync(Guid id)
     {
-        var result = await _orderService.UpdateReturnTimeAsync(id);
-
-        if (result.StatusCode == 200)
+        try
         {
-            TempData["Ok"] = "Đã cập nhật thời gian trả xe";
-        }
-        else
-        {
-            TempData["Err"] = result.Message ?? "Không thể cập nhật thời gian trả xe";
-        }
+            // Load order first to get CustomerId and calculate final price
+            var orderResult = await _orderService.GetOrderByIdAsync(id);
+            if (orderResult.StatusCode != 200 || orderResult.Data is not ViewOrderResponseDTO order)
+            {
+                TempData["Err"] = "Không tìm thấy đơn hàng";
+                return RedirectToPage(new { id });
+            }
 
-        return RedirectToPage(new { id });
+            // Calculate final price
+            decimal finalPrice;
+            try
+            {
+                finalPrice = await _paymentService.CalculateFinalPriceAsync(id);
+                _logger.LogInformation("Final price calculated: {FinalPrice} for Order {OrderId}", finalPrice, id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calculating final price for order {OrderId}", id);
+                TempData["Err"] = $"Không thể tính toán số tiền thanh toán. Lỗi: {ex.Message}";
+                return RedirectToPage(new { id });
+            }
+
+            // IMPORTANT: Process payment FIRST before updating return time
+            // Because UpdateReturnTime might change order status to COMPLETED
+            var paymentDto = new FinalizeReturnPaymentDTO
+            {
+                AccountId = order.CustomerId,
+                Amount = finalPrice,
+                FinalPaymentMethod = "WALLET"
+            };
+
+            _logger.LogInformation("Processing payment for Order {OrderId}, Customer {CustomerId}, Amount {Amount}",
+                id, order.CustomerId, finalPrice);
+
+            var paymentResult = await _paymentService.FinalizeReturnPaymentAsync(paymentDto);
+
+            if (paymentResult.StatusCode != 200)
+            {
+                _logger.LogError("Payment failed for Order {OrderId}: {Message}", id, paymentResult.Message);
+                TempData["Err"] = $"Thanh toán thất bại: {paymentResult.Message}. Vui lòng kiểm tra số dư ví khách hàng.";
+                return RedirectToPage(new { id });
+            }
+
+            _logger.LogInformation("Payment successful for Order {OrderId}, now updating return time", id);
+
+            // After successful payment, update return time
+            var updateReturnTimeResult = await _orderService.UpdateReturnTimeAsync(id);
+            if (updateReturnTimeResult.StatusCode != 200)
+            {
+                _logger.LogWarning("Payment successful but UpdateReturnTime failed for Order {OrderId}: {Message}",
+                    id, updateReturnTimeResult.Message);
+                TempData["Ok"] = $"Đã thanh toán thành công {finalPrice.ToString("N0")} đ";
+                // TempData["Err"] = $"Cảnh báo: Không thể cập nhật thời gian trả xe. {updateReturnTimeResult.Message}";
+            }
+            else
+            {
+                _logger.LogInformation("Successfully completed order {OrderId}: payment and return time updated", id);
+                TempData["Ok"] = $"Đã thanh toán thành công {finalPrice.ToString("N0")} đ và cập nhật thời gian trả xe";
+            }
+
+            return RedirectToPage(new { id });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error in OnPostUpdateReturnTimeAsync for order {OrderId}", id);
+            TempData["Err"] = $"Lỗi không mong muốn: {ex.Message}";
+            return RedirectToPage(new { id });
+        }
     }
 
     public async Task<IActionResult> OnPostUpdateBatteryAsync(Guid id)
@@ -184,112 +307,51 @@ public class DetailsModel : PageModel
         return RedirectToPage(new { id });
     }
 
-    public async Task<IActionResult> OnPostFinalizePaymentAsync(Guid id)
+    public async Task<IActionResult> OnPostCreateDamageReportAsync(Guid id)
     {
-        try
+        // Load order first to get VehicleId
+        var orderResult = await _orderService.GetOrderByIdAsync(id);
+        if (orderResult.StatusCode != 200 || orderResult.Data is not ViewOrderResponseDTO order)
         {
-            // Load order first to get CustomerId
-            var orderResult = await _orderService.GetOrderByIdAsync(id);
-            if (orderResult.StatusCode != 200 || orderResult.Data is not ViewOrderResponseDTO order)
-            {
-                _logger.LogWarning("Order not found. OrderId: {OrderId}, StatusCode: {StatusCode}", id, orderResult.StatusCode);
-                TempData["Err"] = $"Không tìm thấy đơn hàng. Lỗi: {orderResult.Message}";
-                return RedirectToPage(new { id });
-            }
-
-            _logger.LogInformation("Processing payment for Order {OrderId}, Customer {CustomerId}", order.OrderId, order.CustomerId);
-
-            // Calculate final price
-            decimal finalPrice;
-            try
-            {
-                finalPrice = await _paymentService.CalculateFinalPriceAsync(id);
-                _logger.LogInformation("Final price calculated: {FinalPrice} for Order {OrderId}", finalPrice, id);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error calculating final price for order {OrderId}", id);
-                TempData["Err"] = $"Không thể tính toán số tiền thanh toán. Lỗi: {ex.Message}";
-                return RedirectToPage(new { id });
-            }
-
-            if (finalPrice <= 0)
-            {
-                TempData["Err"] = $"Số tiền thanh toán không hợp lệ: {finalPrice}";
-                return RedirectToPage(new { id });
-            }
-
-            // Try using CompleteOrderWithFinalPaymentAsync for stored procedure approach
-            _logger.LogInformation("Calling CompleteOrderWithFinalPaymentAsync for Order {OrderId} with WALLET payment", id);
-
-            var result = await _paymentService.CompleteOrderWithFinalPaymentAsync(id, "WALLET");
-
-            _logger.LogInformation("Payment result: StatusCode={StatusCode}, Message={Message}",
-                result.StatusCode, result.Message);
-
-            if (result.StatusCode == 200)
-            {
-                // After successful payment, update return time
-                var updateReturnTimeResult = await _orderService.UpdateReturnTimeAsync(id);
-
-                if (updateReturnTimeResult.StatusCode == 200)
-                {
-                    TempData["Ok"] = $"Đã thanh toán thành công {finalPrice.ToString("N0")} đ và cập nhật thời gian trả xe";
-                    TempData["PaymentCompleted"] = true;
-                }
-                else
-                {
-                    _logger.LogWarning("Payment successful but UpdateReturnTime failed for Order {OrderId}: {Message}",
-                        id, updateReturnTimeResult.Message);
-                    TempData["Ok"] = $"Đã thanh toán thành công {finalPrice.ToString("N0")} đ";
-                    TempData["Err"] = $"Cảnh báo: Không thể cập nhật thời gian trả xe. Lỗi: {updateReturnTimeResult.Message}";
-                }
-            }
-            else
-            {
-                // If CompleteOrderWithFinalPaymentAsync fails, try FinalizeReturnPaymentAsync as fallback
-                _logger.LogWarning("CompleteOrderWithFinalPaymentAsync failed, trying FinalizeReturnPaymentAsync as fallback");
-
-                var paymentDto = new FinalizeReturnPaymentDTO
-                {
-                    AccountId = order.CustomerId,
-                    Amount = finalPrice,
-                    FinalPaymentMethod = "WALLET"
-                };
-
-                var fallbackResult = await _paymentService.FinalizeReturnPaymentAsync(paymentDto);
-
-                if (fallbackResult.StatusCode == 200)
-                {
-                    // After successful payment, update return time
-                    var updateReturnTimeResult = await _orderService.UpdateReturnTimeAsync(id);
-
-                    if (updateReturnTimeResult.StatusCode == 200)
-                    {
-                        TempData["Ok"] = $"Đã thanh toán thành công {finalPrice.ToString("N0")} đ và cập nhật thời gian trả xe";
-                        TempData["PaymentCompleted"] = true;
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Payment successful but UpdateReturnTime failed for Order {OrderId}: {Message}",
-                            id, updateReturnTimeResult.Message);
-                        TempData["Ok"] = $"Đã thanh toán thành công {finalPrice.ToString("N0")} đ";
-                        TempData["Err"] = $"Cảnh báo: Không thể cập nhật thời gian trả xe. Lỗi: {updateReturnTimeResult.Message}";
-                    }
-                }
-                else
-                {
-                    TempData["Err"] = $"Không thể hoàn tất thanh toán. Lỗi: {fallbackResult.Message}";
-                }
-            }
-
+            TempData["Err"] = "Không tìm thấy đơn hàng";
             return RedirectToPage(new { id });
         }
-        catch (Exception ex)
+
+        // Set OrderId and VehicleId
+        CreateDamageReportDto.OrderId = id;
+        CreateDamageReportDto.VehicleId = order.VehicleId;
+
+        // Validate input
+        if (string.IsNullOrWhiteSpace(CreateDamageReportDto.Description))
         {
-            _logger.LogError(ex, "Unexpected error in OnPostFinalizePaymentAsync for order {OrderId}", id);
-            TempData["Err"] = $"Lỗi không mong muốn: {ex.Message}";
+            TempData["Err"] = "Vui lòng nhập mô tả hư hỏng";
             return RedirectToPage(new { id });
         }
+
+        if (CreateDamageReportDto.EstimatedCost < 0)
+        {
+            TempData["Err"] = "Chi phí ước tính không hợp lệ";
+            return RedirectToPage(new { id });
+        }
+
+        var result = await _damageReportService.CreateDamageReportAsync(CreateDamageReportDto);
+
+        if (result.StatusCode == 200)
+        {
+            _logger.LogInformation("Damage report created successfully for Order {OrderId}", id);
+            TempData["Ok"] = "Đã tạo báo cáo hư hỏng thành công";
+            TempData["DamageReportCreated"] = true; // Flag to prevent form from showing again
+        }
+        else
+        {
+            _logger.LogError("Failed to create damage report for Order {OrderId}: {Message}", id, result.Message);
+            TempData["Err"] = result.Message ?? "Không thể tạo báo cáo hư hỏng";
+        }
+
+        // Clear form data to prevent resubmission
+        ModelState.Clear();
+        CreateDamageReportDto = new CreateDamageReportRequestDTO();
+
+        return RedirectToPage(new { id });
     }
 }

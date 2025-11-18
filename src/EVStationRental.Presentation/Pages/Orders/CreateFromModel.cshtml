@@ -3,8 +3,8 @@
 @{
     ViewData["Title"] = "Đặt xe";
     var vehicleImage = !string.IsNullOrWhiteSpace(Model.VehicleImageUrl)
-        ? Model.VehicleImageUrl
-        : Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg");
+    ? Model.VehicleImageUrl
+    : Url.Content("~/imgs/usnpx-25lucidair-jmv-0709.jpg");
 }
 
 <div class="page-card booking-shell">
@@ -35,12 +35,13 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Nhận xe</label>
-                            <input class="form-control" asp-for="Order.StartTime" type="datetime-local" />
+                            <input class="form-control" asp-for="Order.StartTime" type="datetime-local"
+                                id="startTime" />
                             <span class="text-danger" asp-validation-for="Order.StartTime"></span>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Trả xe</label>
-                            <input class="form-control" asp-for="Order.EndTime" type="datetime-local" />
+                            <input class="form-control" asp-for="Order.EndTime" type="datetime-local" id="endTime" />
                             <span class="text-danger" asp-validation-for="Order.EndTime"></span>
                         </div>
                         <div class="col-md-6">
@@ -172,3 +173,41 @@
 </div>
 
 <partial name="~/Pages/Shared/_ValidationScriptsPartial.cshtml" />
+
+@section Scripts {
+    <script>
+        (function () {
+            const startTimeInput = document.getElementById('startTime');
+            const endTimeInput = document.getElementById('endTime');
+
+            // Set minimum date to tomorrow (disable today completely)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+
+            // Format to datetime-local format (YYYY-MM-DDTHH:mm)
+            const minDate = tomorrow.toISOString().slice(0, 16);
+
+            if (startTimeInput) {
+                startTimeInput.setAttribute('min', minDate);
+
+                // Update end time minimum when start time changes
+                startTimeInput.addEventListener('change', function () {
+                    if (this.value && endTimeInput) {
+                        endTimeInput.setAttribute('min', this.value);
+
+                        // If end time is before start time, clear it
+                        if (endTimeInput.value && endTimeInput.value < this.value) {
+                            endTimeInput.value = '';
+                        }
+                    }
+                });
+            }
+
+            // Set initial minimum for end time based on start time
+            if (endTimeInput && startTimeInput && startTimeInput.value) {
+                endTimeInput.setAttribute('min', startTimeInput.value);
+            }
+        })();
+    </script>
+}

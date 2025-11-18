@@ -60,11 +60,33 @@ namespace EVStationRental.Services.InternalServices.Services.StationServices
                     Message = Const.WARNING_NO_DATA_MSG
                 };
             }
+
+            // Map to DTO with available vehicle count
+            var stationDTOs = new List<StationWithAvailableVehiclesResponse>();
+
+            foreach (var station in stations)
+            {
+                // Get available vehicles count for each station
+                var vehicles = await unitOfWork.StationRepository.GetVehiclesByStationIdAsync(station.StationId);
+                var availableCount = vehicles?.Count(v => v.Status == Common.Enums.EnumModel.VehicleStatus.AVAILABLE) ?? 0;
+
+                stationDTOs.Add(new StationWithAvailableVehiclesResponse
+                {
+                    StationId = station.StationId,
+                    Name = station.Name,
+                    Address = station.Address,
+                    Capacity = station.Capacity,
+                    Lat = station.Lat,
+                    Long = station.Long,
+                    AvailableVehicleCount = availableCount
+                });
+            }
+
             return new ServiceResult
             {
                 StatusCode = Const.SUCCESS_READ_CODE,
                 Message = Const.SUCCESS_READ_MSG,
-                Data = stations
+                Data = stationDTOs
             };
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using EVStationRental.Common.Enums.EnumModel;
 
 namespace EVStationRental.Repositories.Models;
 
@@ -22,6 +23,8 @@ public partial class DamageReport
     public DateTime? UpdatedAt { get; set; }
 
     public bool Isactive { get; set; }
+
+    public DamageLevelEnum DamageLevel { get; set; }
 
     public virtual Order Order { get; set; } = null!;
 

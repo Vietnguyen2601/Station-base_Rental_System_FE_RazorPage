@@ -170,40 +170,57 @@ public partial class ElectricVehicleDBContext : DbContext
         });
 
         modelBuilder.Entity<DamageReport>(entity =>
-        {
-            entity.HasKey(e => e.DamageId).HasName("DamageReports_pkey");
+{
+    entity.HasKey(e => e.DamageId).HasName("DamageReports_pkey");
 
-            entity.Property(e => e.DamageId)
-                .HasDefaultValueSql("gen_random_uuid()")
-                .HasColumnName("damage_id");
-            entity.Property(e => e.CreatedAt)
-                .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("created_at");
-            entity.Property(e => e.Description).HasColumnName("description");
-            entity.Property(e => e.EstimatedCost).HasColumnName("estimated_cost");
-            entity.Property(e => e.Img)
-                .HasColumnType("character varying")
-                .HasColumnName("img");
-            entity.Property(e => e.Isactive)
-                .HasDefaultValue(true)
-                .HasColumnName("isactive");
-            entity.Property(e => e.OrderId).HasColumnName("order_id");
-            entity.Property(e => e.UpdatedAt)
-                .HasColumnType("timestamp without time zone")
-                .HasColumnName("updated_at");
-            entity.Property(e => e.VehicleId).HasColumnName("vehicle_id");
+    entity.Property(e => e.DamageId)
+        .HasDefaultValueSql("gen_random_uuid()")
+        .HasColumnName("damage_id");
 
-            entity.HasOne(d => d.Order).WithMany(p => p.DamageReports)
-                .HasForeignKey(d => d.OrderId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("DamageReports_order_id_fkey");
+    entity.Property(e => e.CreatedAt)
+        .HasDefaultValueSql("CURRENT_TIMESTAMP")
+        .HasColumnType("timestamp without time zone")
+        .HasColumnName("created_at");
 
-            entity.HasOne(d => d.Vehicle).WithMany(p => p.DamageReports)
-                .HasForeignKey(d => d.VehicleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("DamageReports_vehicle_id_fkey");
-        });
+    entity.Property(e => e.Description)
+        .HasColumnName("description");
+
+    entity.Property(e => e.EstimatedCost)
+        .HasColumnName("estimated_cost");
+
+    // ⭐ FIX: Dùng NATIVE PostgreSQL Enum (remove HasConversion)
+    entity.Property(e => e.DamageLevel)
+        .HasColumnName("damage_level");
+
+    entity.Property(e => e.Img)
+        .HasColumnType("character varying")
+        .HasColumnName("img");
+
+    entity.Property(e => e.Isactive)
+        .HasDefaultValue(true)
+        .HasColumnName("isactive");
+
+    entity.Property(e => e.OrderId)
+        .HasColumnName("order_id");
+
+    entity.Property(e => e.UpdatedAt)
+        .HasColumnType("timestamp without time zone")
+        .HasColumnName("updated_at");
+
+    entity.Property(e => e.VehicleId)
+        .HasColumnName("vehicle_id");
+
+    entity.HasOne(d => d.Order).WithMany(p => p.DamageReports)
+        .HasForeignKey(d => d.OrderId)
+        .OnDelete(DeleteBehavior.ClientSetNull)
+        .HasConstraintName("DamageReports_order_id_fkey");
+
+    entity.HasOne(d => d.Vehicle).WithMany(p => p.DamageReports)
+        .HasForeignKey(d => d.VehicleId)
+        .OnDelete(DeleteBehavior.ClientSetNull)
+        .HasConstraintName("DamageReports_vehicle_id_fkey");
+});
+
 
         modelBuilder.Entity<Feedback>(entity =>
         {

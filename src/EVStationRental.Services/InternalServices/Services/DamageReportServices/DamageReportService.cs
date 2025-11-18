@@ -65,10 +65,10 @@ namespace EVStationRental.Services.InternalServices.Services.DamageReportService
         {
             var damageReport = await _unitOfWork.DamageReportRepository.GetDamageReportByDamageIdAsync(damageReportId);
             if (damageReport == null)
-                return new ServiceResult 
-                { 
-                    StatusCode = Const.WARNING_NO_DATA_CODE, 
-                    Message = "Không tìm thấy damage report" 
+                return new ServiceResult
+                {
+                    StatusCode = Const.WARNING_NO_DATA_CODE,
+                    Message = "Không tìm thấy damage report"
                 };
             var dto = damageReport.ToViewDamageReportDTO();
             return new ServiceResult { StatusCode = Const.SUCCESS_READ_CODE, Message = Const.SUCCESS_READ_MSG, Data = dto };

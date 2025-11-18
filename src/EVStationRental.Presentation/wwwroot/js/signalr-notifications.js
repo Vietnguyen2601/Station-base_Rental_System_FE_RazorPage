@@ -47,6 +47,36 @@
         }
     };
 
+    const showNotification = (title, message, type = 'info') => {
+        const alertTypeMap = {
+            'info': 'alert-info',
+            'success': 'alert-success',
+            'warning': 'alert-warning',
+            'danger': 'alert-danger'
+        };
+        
+        const alertClass = alertTypeMap[type] || 'alert-info';
+        
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; max-width: 400px;';
+        notification.innerHTML = `
+            <strong>${title}</strong><br/>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                const bsAlert = bootstrap.Alert.getOrCreateInstance(notification);
+                bsAlert.close();
+            }
+        }, 5000);
+    };
+
     const connection = new signalR.HubConnectionBuilder()
         .withUrl("/hubs/realtime")
         .withAutomaticReconnect()
@@ -78,7 +108,19 @@
             return;
         }
 
-        if (isCustomerOrdersPage() || isStaffOrdersPage()) {
+        // Show notification for staff
+        if (isStaffOrdersPage()) {
+            showNotification(
+                'Đơn hàng mới',
+                `Đơn hàng ${order.orderCode || ''} vừa được tạo bởi khách hàng`,
+                'info'
+            );
+            
+            // Reload after showing notification
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else if (isCustomerOrdersPage()) {
             window.location.reload();
         }
     });
@@ -109,7 +151,21 @@
             if (staffRow) {
                 const statusCell = staffRow.querySelector("[data-order-status]");
                 updateOrderStatusDisplay(statusCell, order.status);
+                
+                // Highlight the row briefly
+                staffRow.classList.add('table-warning');
+                setTimeout(() => {
+                    staffRow.classList.remove('table-warning');
+                }, 2000);
             }
+            
+            // Show notification
+            const statusMeta = orderStatusMap[(order.status || "").toUpperCase()];
+            showNotification(
+                'Cập nhật đơn hàng',
+                `Đơn hàng ${order.orderCode || ''} đã chuyển sang: ${statusMeta?.label || order.status}`,
+                'success'
+            );
         }
     });
 
@@ -175,5 +231,14 @@
         }
     });
 
-    connection.start().catch((err) => console.error("SignalR connection error", err));
+    connection.start()
+        .then(() => {
+            console.log("SignalR connected successfully");
+        })
+        .catch((err) => {
+            console.error("SignalR connection error", err);
+        });
+
+    // Export connection for page-specific usage
+    window.signalRConnection = connection;
 })();

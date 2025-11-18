@@ -53,6 +53,8 @@ try
         nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
     Npgsql.NpgsqlConnection.GlobalTypeMapper.MapEnum<EVStationRental.Common.Enums.EnumModel.TransactionType>("transaction_type_enum",
         nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
+    Npgsql.NpgsqlConnection.GlobalTypeMapper.MapEnum<EVStationRental.Common.Enums.EnumModel.DamageLevelEnum>("damage_level_enum",
+        nameTranslator: new Npgsql.NameTranslation.NpgsqlNullNameTranslator());
 }
 catch (Exception ex)
 {
