@@ -5,119 +5,52 @@
     Layout = "~/Pages/Staff/Shared/_StaffLayout.cshtml";
 }
 
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="fw-bold">Dashboard Nhân viên</h2>
-            <p class="text-muted">Chào mừng bạn đến với trang quản lý nhân viên</p>
+<section class="page-card">
+    <div class="section-heading">
+        <span class="section-heading__eyebrow">Bảng điều khiển</span>
+        <div>
+            <h2 class="section-heading__title">Dashboard nhân viên</h2>
+            <p class="section-heading__subtitle">Chào mừng bạn trở lại. Theo dõi đội xe, trạng thái trạm và đơn hàng realtime.</p>
         </div>
     </div>
-
-    <div class="row g-4">
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0 bg-primary bg-opacity-10 rounded p-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                                class="bi bi-cart text-primary" viewBox="0 0 16 16">
-                                <path
-                                    d="M0 1.5A.5.5 0 0 1 .5 1H2a.5.5 0 0 1 .485.379L2.89 3H14.5a.5.5 0 0 1 .491.592l-1.5 8A.5.5 0 0 1 13 12H4a.5.5 0 0 1-.491-.408L2.01 3.607 1.61 2H.5a.5.5 0 0 1-.5-.5M3.102 4l1.313 7h8.17l1.313-7H3.102zM5 12a2 2 0 1 0 0 4 2 2 0 0 0 0-4m7 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4m-7 1a1 1 0 1 1 0 2 1 1 0 0 1 0-2m7 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2" />
-                            </svg>
-                        </div>
-                        <div class="ms-3">
-                            <h6 class="mb-0 text-muted">Đơn hàng hôm nay</h6>
-                            <h3 class="mb-0 fw-bold">0</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0 bg-success bg-opacity-10 rounded p-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                                class="bi bi-ev-front text-success" viewBox="0 0 16 16">
-                                <path
-                                    d="M9.354 4.243a.5.5 0 0 0-.708-.708L6 6.182 3.854 4.035a.5.5 0 1 0-.708.708L5.293 7 3.146 9.146a.5.5 0 0 0 .708.708L6 7.707l2.146 2.147a.5.5 0 0 0 .708-.708L6.707 7z" />
-                                <path
-                                    d="M14 7a2 2 0 0 0-2-2h-1a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2zm-2-1a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" />
-                                <path
-                                    d="M3 5a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm1 7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1z" />
-                            </svg>
-                        </div>
-                        <div class="ms-3">
-                            <h6 class="mb-0 text-muted">Xe đang thuê</h6>
-                            <h3 class="mb-0 fw-bold">0</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0 bg-warning bg-opacity-10 rounded p-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                                class="bi bi-wrench text-warning" viewBox="0 0 16 16">
-                                <path
-                                    d="M.102 2.223A3.004 3.004 0 0 0 3.78 5.897l6.341 6.252A3.003 3.003 0 0 0 13 16a3 3 0 1 0-.851-5.878L5.897 3.781A3.004 3.004 0 0 0 2.223.1a3 3 0 0 0-.12 2.123zm11.274 9.98.614.615a2 2 0 1 1-2.828 0l-.614-.615a2 2 0 1 1 2.828 0zM5.897 3.781l6.341 6.252A3.003 3.003 0 0 0 13 9.5a3 3 0 0 0-2.78-2.897L3.78 5.897A3.004 3.004 0 0 0 .102 2.223a3 3 0 0 0 2.12.102l3.675 1.456z" />
-                            </svg>
-                        </div>
-                        <div class="ms-3">
-                            <h6 class="mb-0 text-muted">Xe bảo trì</h6>
-                            <h3 class="mb-0 fw-bold">0</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0 bg-info bg-opacity-10 rounded p-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor"
-                                class="bi bi-pin-map text-info" viewBox="0 0 16 16">
-                                <path fill-rule="evenodd"
-                                    d="M3.1 11.2a.5.5 0 0 1 .4-.2H6a.5.5 0 0 1 0 1H3.75L1.5 15h13l-2.25-3H10a.5.5 0 0 1 0-1h2.5a.5.5 0 0 1 .4.2l3 4a.5.5 0 0 1-.4.8H.5a.5.5 0 0 1-.4-.8z" />
-                                <path fill-rule="evenodd"
-                                    d="M8 1a3 3 0 1 0 0 6 3 3 0 0 0 0-6M4 4a4 4 0 1 1 4.5 3.969V13.5a.5.5 0 0 1-1 0V7.97A4 4 0 0 1 4 4" />
-                            </svg>
-                        </div>
-                        <div class="ms-3">
-                            <h6 class="mb-0 text-muted">Trạm hoạt động</h6>
-                            <h3 class="mb-0 fw-bold">0</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="grid-cards">
+        <article class="stat-card">
+            <p class="stat-card__label">Đơn hàng hôm nay</p>
+            <div class="stat-card__value">0</div>
+            <p class="text-muted mb-0 small">Cập nhật mỗi 5 phút</p>
+        </article>
+        <article class="stat-card">
+            <p class="stat-card__label">Xe đang thuê</p>
+            <div class="stat-card__value">0</div>
+            <p class="text-muted mb-0 small">Bao gồm cả chuyến đang xử lý</p>
+        </article>
+        <article class="stat-card">
+            <p class="stat-card__label">Xe bảo trì</p>
+            <div class="stat-card__value">0</div>
+            <p class="text-muted mb-0 small">Đang khóa đặt lịch</p>
+        </article>
+        <article class="stat-card">
+            <p class="stat-card__label">Trạm hoạt động</p>
+            <div class="stat-card__value">0</div>
+            <p class="text-muted mb-0 small">Trạm online trong 24h qua</p>
+        </article>
     </div>
+</section>
 
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white py-3">
-                    <h5 class="mb-0 fw-bold">Hoạt động gần đây</h5>
-                </div>
-                <div class="card-body">
-                    <div class="text-center py-5 text-muted">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor"
-                            class="bi bi-inbox mb-3" viewBox="0 0 16 16">
-                            <path
-                                d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .12.374l-.4 3.2A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.493-1.238l-.4-3.2a.5.5 0 0 1 .12-.374z" />
-                        </svg>
-                        <p>Chưa có hoạt động nào</p>
-                    </div>
-                </div>
-            </div>
+<section class="page-card">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+        <div>
+            <h5 class="mb-1">Hoạt động gần đây</h5>
+            <p class="text-muted mb-0">Nhật ký xử lý yêu cầu bảo trì, giao xe và cập nhật đơn hàng.</p>
         </div>
+        <span class="badge badge-soft">Realtime feed</span>
     </div>
-</div>
+    <div class="text-center py-5 text-muted">
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-inbox mb-3"
+            viewBox="0 0 16 16">
+            <path
+                d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.98 3h6.04a1.5 1.5 0 0 1 1.17.563l3.7 4.625a.5.5 0 0 1 .12.374l-.4 3.2A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.493-1.238l-.4-3.2a.5.5 0 0 1 .12-.374z" />
+        </svg>
+        <p class="mb-0">Chưa có hoạt động nào</p>
+    </div>
+</section>
